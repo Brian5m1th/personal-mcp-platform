@@ -61,6 +61,23 @@ def _generate_project_config(agent: str, project_root: Path) -> dict:
     """Generate agent-specific MCP config for a project."""
     gen = AgentConfigGenerator()
     servers = gen._get_servers_for_agent()
+
+    if agent == "opencode":
+        # OpenCode uses mcp.<name>.type="local" + command array format
+        config = {"mcp": {}}
+        for s in servers:
+            cmd = [s["command"]]
+            cmd.extend(s["args"])
+            entry = {"type": "local", "command": cmd}
+            env = {}
+            for key, val in s.get("env", {}).items():
+                env[key] = val
+            if env:
+                entry["environment"] = env
+            config["mcp"][s["id"]] = entry
+        return config
+
+    # Claude Code / others use mcpServers format
     config = {"mcpServers": {}}
     for s in servers:
         env = {}
@@ -103,17 +120,20 @@ def project_cmd(
         env = _generate_project_env(project_root)
 
         if agent == "opencode":
-            config_path = project_root / ".opencode.json"
-            # Merge with existing .opencode.json (preserve $schema, plugin, etc.)
+            config_path = project_root / ".opencode" / "opencode.json"
+            # Merge with existing (preserve $schema, plugin, etc.)
             existing = {}
             if config_path.exists():
                 try:
                     existing = json.loads(config_path.read_text(encoding="utf-8"))
                 except Exception:
                     pass
+            # Remove old format keys if present
+            existing.pop("mcpServers", None)
+            existing.pop("mcp", None)
+            # Merge
             merged = dict(existing)
-            merged.pop("mcpServers", None)  # Remove old servers
-            merged["mcpServers"] = config["mcpServers"]
+            merged.update(config)
             with open(config_path, "w", encoding="utf-8") as f:
                 json.dump(merged, f, indent=2, ensure_ascii=False)
 

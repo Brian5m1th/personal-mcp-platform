@@ -64,14 +64,28 @@ class AgentConfigGenerator:
         return config
 
     def generate_opencode(self) -> dict:
-        """Generate .opencode.json configuration."""
+        """Generate .opencode.json configuration using OpenCode MCP format.
+
+        OpenCode uses:
+          mcp.<name>.type = "local"
+          mcp.<name>.command = ["npx", "-y", "@package/name"]
+          mcp.<name>.environment = { ... }
+        """
         servers = self._get_servers_for_agent()
-        config = {"mcpServers": {}}
+        config = {"mcp": {}}
         for s in servers:
-            config["mcpServers"][s["id"]] = {
-                "command": s["command"],
-                "args": s["args"],
+            cmd = [s["command"]]
+            cmd.extend(s["args"])
+            entry = {
+                "type": "local",
+                "command": cmd,
             }
+            env = {}
+            for key, val in s.get("env", {}).items():
+                env[key] = val
+            if env:
+                entry["environment"] = env
+            config["mcp"][s["id"]] = entry
         return config
 
     def generate_vscode(self) -> dict:
@@ -121,7 +135,7 @@ class AgentConfigGenerator:
             home = Path.home()
             output_paths = {
                 "claude-code": home / ".claude.json",
-                "opencode": Path.cwd() / ".opencode.json",
+                "opencode": Path.cwd() / ".opencode" / "opencode.json",
                 "vscode": home / ".config" / "Code" / "User" / "settings.json",
                 "cursor": home / ".cursor" / "mcp.json",
                 "antigravity": home / ".antigravity" / "mcp.json",
@@ -134,7 +148,7 @@ class AgentConfigGenerator:
         # Write configuration
         with open(output_path, "w", encoding="utf-8") as f:
             if agent == "opencode":
-                # OpenCode uses JSON format (not YAML)
+                # OpenCode uses mcp.<name>.type = "local" + command array format
                 # Preserve existing fields like $schema and plugin if present
                 existing = {}
                 if output_path.exists():
@@ -142,9 +156,18 @@ class AgentConfigGenerator:
                         existing = json.loads(output_path.read_text(encoding="utf-8"))
                     except Exception:
                         pass
-                # Merge: keep existing $schema, plugin; add/replace mcpServers
+                # Remove old format keys if present
+                existing.pop("mcpServers", None)
+                existing.pop("mcp", None)
+                # Merge: keep existing $schema, plugin; add MCP servers
                 merged = dict(existing)
-                merged["mcpServers"] = config.get("mcpServers", {})
+                # Ensure $schema and plugin if not present
+                if "$schema" not in merged:
+                    merged["$schema"] = "https://opencode.ai/config.json"
+                if "plugin" not in merged:
+                    merged["plugin"] = []
+                # Add the new mcp config
+                merged["mcp"] = config.get("mcp", {})
                 json.dump(merged, f, indent=2, ensure_ascii=False)
             else:
                 json.dump(config, f, indent=2, ensure_ascii=False)
