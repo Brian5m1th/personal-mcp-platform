@@ -1,0 +1,40 @@
+# Personal AI Engineering Platform — MCP
+#
+# Python package files
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+
+# Configuration (user-specific)
+config/config.yaml
+active_profile.yaml
+profiles/*.yaml
+servers/*.yaml
+secrets/*.yaml
+secrets/*.enc
+secrets/*.age
+
+# Runtime data
+cache/
+logs/
+downloads/
+backups/
+
+# Environment
+.env
+.env.local
+*.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
