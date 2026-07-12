@@ -71,6 +71,14 @@ BUILTIN_PROFILES = {
         ],
         "disabled_servers": ["serena", "playwright", "docker", "postgres", "sequential-thinking"],
     },
+    "data-engineering": {
+        "name": "Data Engineering",
+        "description": "Servers for data pipelines, ETL, analytics, and database management",
+        "enabled_servers": [
+            "postgres", "docker", "github", "fetch", "filesystem",
+        ],
+        "disabled_servers": ["serena", "playwright", "context7", "sequential-thinking", "memory"],
+    },
     "full-stack": {
         "name": "Full Stack (Default)",
         "description": "All servers with sensible limits",
