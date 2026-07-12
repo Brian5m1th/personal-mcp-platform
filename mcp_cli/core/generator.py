@@ -26,12 +26,22 @@ class AgentConfigGenerator:
         result = []
         for s in servers:
             transport = s.get("protocol", {}).get("transports", [{}])[0]
+            # Resolve placeholders in args
+            args = []
+            for arg in transport.get("args", []):
+                arg = arg.replace("{{workspace}}", str(Path.cwd()))
+                arg = arg.replace("{{mcp_home}}", str(get_mcp_home()))
+                args.append(arg)
+            # Resolve env vars
+            env = {}
+            for key, val in transport.get("env", {}).items():
+                env[key] = val
             result.append({
                 "id": s.get("id"),
                 "name": s.get("name"),
                 "command": transport.get("command"),
-                "args": transport.get("args", []),
-                "env": transport.get("env", {}),
+                "args": args,
+                "env": env,
             })
         return result
 
@@ -124,7 +134,18 @@ class AgentConfigGenerator:
         # Write configuration
         with open(output_path, "w", encoding="utf-8") as f:
             if agent == "opencode":
-                yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+                # OpenCode uses JSON format (not YAML)
+                # Preserve existing fields like $schema and plugin if present
+                existing = {}
+                if output_path.exists():
+                    try:
+                        existing = json.loads(output_path.read_text(encoding="utf-8"))
+                    except Exception:
+                        pass
+                # Merge: keep existing $schema, plugin; add/replace mcpServers
+                merged = dict(existing)
+                merged["mcpServers"] = config.get("mcpServers", {})
+                json.dump(merged, f, indent=2, ensure_ascii=False)
             else:
                 json.dump(config, f, indent=2, ensure_ascii=False)
 

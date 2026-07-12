@@ -20,7 +20,7 @@ servers:
       command: npx
       args:
       - -y
-      - '@context7/mcp-server'
+      - '@upstash/context7-mcp'
       env: {}
   permissions:
     filesystem: none
@@ -51,7 +51,7 @@ servers:
   - hallucination-reduction
   install:
     method: npx
-    command: npx @context7/mcp-server
+    command: npx @upstash/context7-mcp
     auto_update: true
     update_policy: minor
   health:
@@ -519,7 +519,7 @@ servers:
     stability: 0.98
 - id: fetch
   name: Fetch MCP
-  version: 0.0.78
+  version: 1.1.2
   category: web-research
   description: Web fetching and content extraction for documentation lookup, API references,
     and technical research.
@@ -536,7 +536,7 @@ servers:
       command: npx
       args:
       - -y
-      - '@modelcontextprotocol/server-fetch'
+      - mcp-fetch-server
       env: {}
   permissions:
     filesystem: none
@@ -567,7 +567,7 @@ servers:
   - docs
   install:
     method: npx
-    command: npx @modelcontextprotocol/server-fetch
+    command: npx mcp-fetch-server
     auto_update: true
     update_policy: minor
   health:

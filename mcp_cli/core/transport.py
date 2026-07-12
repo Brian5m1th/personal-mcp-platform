@@ -88,7 +88,12 @@ class StdioTransport(MCPTransport):
         if not self._command:
             raise TransportConnectionError("No command configured")
 
-        resolved = shutil.which(self._command)
+        # Resolve executable, prefer .cmd over .ps1 on Windows
+        resolved = None
+        for ext in ["", ".cmd", ".exe"]:
+            resolved = shutil.which(self._command + ext)
+            if resolved:
+                break
         if not resolved:
             raise TransportConnectionError(
                 f"Executable '{self._command}' not found in PATH"

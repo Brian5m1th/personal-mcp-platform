@@ -12,6 +12,7 @@ from loguru import logger
 
 from mcp_cli.core.config import PlatformConfig, get_server_config_path, save_yaml, load_yaml
 from mcp_cli.core.transport import MCPTransport, TransportFactory
+from mcp_cli.core.config import get_mcp_home
 
 
 class ServerState(str, Enum):
@@ -89,6 +90,14 @@ class ManagedServer:
             transport_config = self.registry_entry.get("protocol", {}).get(
                 "transports", [{}]
             )[0]
+            # Resolve placeholders in args
+            resolved_args = []
+            import os
+            for arg in transport_config.get("args", []):
+                arg = arg.replace("{{workspace}}", os.getcwd())
+                arg = arg.replace("{{mcp_home}}", str(get_mcp_home()))
+                resolved_args.append(arg)
+            transport_config["args"] = resolved_args
             self.transport = TransportFactory.create(transport_config)
             await self.transport.connect()
 
@@ -198,6 +207,11 @@ class ServerManager:
             sid = entry.get("id", "unknown")
             if sid in self._servers:
                 logger.warning(f"[{sid}] Already managed")
+                continue
+            # Skip servers that are not installed
+            from mcp_cli.core.config import get_server_config_path
+            if not get_server_config_path(sid).exists():
+                logger.debug(f"[{sid}] Not installed, skipping")
                 continue
             server = ManagedServer(sid, entry)
             if await server.initialize():

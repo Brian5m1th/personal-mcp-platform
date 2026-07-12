@@ -17,10 +17,11 @@ from mcp_cli.core.secrets import SecretsManager
 
 def _find_executable(name: str) -> str | None:
     """Find an executable, checking common locations for npm/npx on Windows."""
-    # First try PATH
-    exe = shutil.which(name)
-    if exe:
-        return exe
+    # First try PATH — prefer .cmd over .ps1 on Windows
+    for ext in ["", ".cmd", ".exe"]:
+        exe = shutil.which(name + ext)
+        if exe:
+            return exe
 
     # Check common Node.js installation paths
     common_paths = [
@@ -33,7 +34,7 @@ def _find_executable(name: str) -> str | None:
         "/opt/homebrew/bin",
     ]
     for base in common_paths:
-        for ext in ["", ".cmd", ".exe", ".ps1"]:
+        for ext in ["", ".cmd", ".exe"]:
             candidate = os.path.join(base, f"{name}{ext}")
             if os.path.isfile(candidate):
                 return candidate
@@ -66,7 +67,10 @@ async def _install_server(server_entry: dict) -> bool:
         if not npx_path:
             rprint(f"[red]  x npx not found. Install Node.js from https://nodejs.org (v18+)[/red]")
             return False
-        package = command.replace("npx ", "").strip()
+        # Extract package name: "npx @scope/package <args>" -> "@scope/package"
+        rest = command.replace("npx ", "").strip()
+        parts = rest.split()
+        package = parts[0] if parts else rest
         cmd = [npx_path, "-y", package]
     elif method == "uvx":
         cmd = ["uvx", command.replace("uvx ", "").strip()]

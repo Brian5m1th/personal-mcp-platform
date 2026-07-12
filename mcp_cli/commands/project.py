@@ -104,8 +104,18 @@ def project_cmd(
 
         if agent == "opencode":
             config_path = project_root / ".opencode.json"
+            # Merge with existing .opencode.json (preserve $schema, plugin, etc.)
+            existing = {}
+            if config_path.exists():
+                try:
+                    existing = json.loads(config_path.read_text(encoding="utf-8"))
+                except Exception:
+                    pass
+            merged = dict(existing)
+            merged.pop("mcpServers", None)  # Remove old servers
+            merged["mcpServers"] = config["mcpServers"]
             with open(config_path, "w", encoding="utf-8") as f:
-                yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+                json.dump(merged, f, indent=2, ensure_ascii=False)
 
         elif agent == "claude-code":
             config_path = project_root / ".claude.json"
