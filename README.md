@@ -1,115 +1,186 @@
 # Personal AI Engineering Platform — MCP
 
 > Universal MCP Infrastructure for AI-Assisted Development.
-> Reusable across **every software project** you develop.
+> Reusable across every software project you develop.
+>
+> Works with: Claude Code • OpenCode • Antigravity • Cursor • VS Code AI
+
+---
 
 ## Quick Start
 
 ```bash
-# Install the platform
-.\scripts\install.ps1
-
-# Or using the CLI after pip install
+# 1. Install the CLI
+cd C:\workspace\Extras\personal-mcp-platform
 pip install -e .
+
+# 2. Install Tier 1 MCP servers
 mcp install --tier 1
-mcp generate opencode
-mcp start
+
+# 3. Generate config for your AI agent
+mcp generate claude-code    # or: opencode, vscode, cursor, antigravity
+
+# 4. Start the servers
+mcp start --profile full-stack
+
+# 5. Verify everything is running
+mcp status
 ```
 
-## CLI Commands
+---
 
-| Command | Description |
-|---------|-------------|
-| `mcp install [server]` | Install MCP servers from the registry |
-| `mcp start [--profile]` | Start servers with active profile |
-| `mcp stop [server]` | Stop server(s) |
-| `mcp restart <server>` | Restart a server |
-| `mcp status` | Show server status |
-| `mcp emergency stop` | Stop all servers immediately |
-| `mcp update [check/apply/rollback]` | Manage updates |
-| `mcp profile [list/set/current/show]` | Manage engineering profiles |
-| `mcp generate <agent>` | Generate config for AI agents |
-| `mcp health [check/metrics/summary]` | Health monitoring |
-| `mcp registry [list/search/info]` | Query server catalog |
-| `mcp config [show/path/edit]` | View/edit platform config |
-| `mcp benchmark [server]` | Benchmark server performance |
+## What is This?
+
+A **Personal AI Engineering Platform** based on the Model Context Protocol (MCP). It provides a shared, reusable set of MCP servers that any MCP-compatible AI agent can use — across **every project you develop**.
+
+Instead of configuring MCP servers independently for each project, you maintain a single, version-controlled platform that all your AI agents consume.
+
+---
+
+## Key Features
+
+- **Universal** — Works with Claude Code, OpenCode, Antigravity, Cursor, VS Code
+- **Portable** — Single config used across K.A.O.S, Wakanda, and all future projects
+- **Versioned** — Full Git history of every configuration change
+- **Cross-platform** — Windows, macOS, Linux, WSL
+- **Secure** — Multi-dimensional permissions, secrets encryption, audit logging
+- **Profiles** — 9 engineering profiles with auto-detection
+- **Self-healing** — Automatic health monitoring and restart
+- **Updatable** — `mcp update check/apply/rollback` with backup snapshots
+
+---
 
 ## Engineering Profiles
 
-| Profile | Focus | Servers |
-|---------|-------|---------|
-| `backend` | Backend APIs, databases | 8 |
-| `frontend` | UI, browser, design | 7 |
-| `devops` | Cloud, containers, CI/CD | 6 |
-| `ai-llm` | AI models, RAG, LLMs | 7 |
-| `security` | Security audits | 5 |
-| `documentation` | Technical writing | 4 |
-| `data-engineering` | Data pipelines | 5 |
-| `full-stack` | All disciplines (default) | 11 |
-| `minimal` | Lightweight coding | 3 |
+| Profile | Focus | Servers | When to Use |
+|---------|-------|---------|-------------|
+| `full-stack` | All disciplines (default) | 11 | General development |
+| `backend` | APIs, databases, containers | 8 | Backend/API work |
+| `frontend` | UI, browser, design | 7 | Frontend work |
+| `devops` | Cloud, CI/CD, infra | 6 | Infrastructure |
+| `ai-llm` | AI models, RAG, LLMs | 7 | AI development |
+| `security` | Security audits | 5 | Security review |
+| `documentation` | Technical writing | 4 | Writing docs |
+| `data-engineering` | Data pipelines | 5 | Data work |
+| `minimal` | Lightweight (low memory) | 3 | Quick edits |
 
-## Supported AI Agents
+---
 
-- Claude Code
-- OpenCode
-- Antigravity
-- Cursor
-- VS Code AI Extensions
+## MCP Servers
 
-## MCP Servers (Registry)
+### Tier 1 — Core (Install First)
+| Server | Version | Purpose | Risk |
+|--------|---------|---------|------|
+| Context7 | 3.2.3 | Live documentation | Low |
+| Serena | 1.10.0 | Semantic code understanding | Low |
+| GitHub | 2025.4.8 | Issues, PRs, code search | Medium |
+| Playwright | 0.0.78 | Browser automation | High |
+| Filesystem | 2026.7.10 | Safe file operations | High |
+| Sequential Thinking | 2026.7.4 | Structured reasoning | None |
 
-### Tier 1 — Core
-| Server | Version | Purpose |
-|--------|---------|---------|
-| Context7 | 3.2.3 | Live documentation |
-| Serena | 1.10.0 | Semantic code understanding |
-| GitHub | 2025.4.8 | Issues, PRs, code search |
-| Playwright | 0.0.78 | Browser automation |
-| Filesystem | 2026.7.10 | Safe file operations |
-| Sequential Thinking | 2026.7.4 | Structured reasoning |
-
-### Tier 2 — Enhanced
-| Server | Version | Purpose |
-|--------|---------|---------|
-| PostgreSQL | 0.6.2 | Database management |
-| Docker | 2026.7.4 | Container management |
-| Fetch | 0.0.78 | Web research |
-| Memory | 2026.7.4 | Persistent memory |
+### Tier 2 — Enhanced (Install on Demand)
+| Server | Version | Purpose | Risk |
+|--------|---------|---------|------|
+| PostgreSQL | 0.6.2 | Database management | High |
+| Docker | 2026.7.4 | Container management | Critical |
+| Fetch | 0.0.78 | Web research | Low |
+| Memory | 2026.7.4 | Persistent memory | Low |
 
 ### Tier 3 — Expert
-| Server | Version | Purpose |
-|--------|---------|---------|
-| Tavily | 1.0.0 | Production web research |
+| Server | Version | Purpose | Risk |
+|--------|---------|---------|------|
+| Tavily | 1.0.0 | Production web research | Low |
+
+---
+
+## CLI Commands
+
+```
+mcp install [server]          Install MCP servers from the registry
+mcp start [--profile]         Start servers with active profile
+mcp stop [server]             Stop server(s)
+mcp restart <server>          Restart a server
+mcp status                    Show server status
+mcp emergency stop            Stop all servers immediately
+mcp update [check|apply|rollback|history]
+mcp profile [list|set|current|show]
+mcp generate <agent>          Generate config for AI agents
+mcp health [check|metrics|summary]
+mcp registry [list|search|info]
+mcp config [show|path|edit]
+mcp benchmark [server]
+```
+
+---
 
 ## Configuration
 
-Platform root: `~/.config/mcp/` (Linux) | `~/Library/Application Support/mcp/` (macOS) | `%APPDATA%/mcp/` (Windows)
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MCP_HOME` | OS-specific | Override platform root directory |
+| `MCP_PROFILE` | `full-stack` | Override active profile |
+| `MCP_DEBUG` | `false` | Enable debug logging |
 
-Override: `$env:MCP_HOME`
+### Default Platform Root
 
-## Architecture
+| OS | Path |
+|----|------|
+| Linux | `~/.config/mcp/` |
+| macOS | `~/Library/Application Support/mcp/` |
+| Windows | `%APPDATA%/mcp/` |
+
+---
+
+## Project Structure
 
 ```
-~/.config/mcp/
-├── registry.yaml        # Server catalog (versioned)
-├── config.yaml          # User preferences
-├── profiles/            # Engineering profiles
-├── servers/             # Server configurations
-├── secrets/             # Encrypted secrets
-├── cache/               # Runtime caches
-├── logs/                # Platform logs
-├── downloads/           # Downloaded binaries
-├── templates/           # Agent config templates
-└── backups/             # Update snapshots
+personal-mcp-platform/
+├── registry.yaml              # Server catalog (versioned, 11 servers)
+├── config/config.yaml         # User preferences
+├── active_profile.yaml        # Current active profile
+├── profiles/                  # 9 engineering profiles
+├── mcp_cli/                   # Python CLI (core + commands)
+├── docker/                    # Docker Compose stack
+├── scripts/install.ps1        # Cross-platform installer
+├── docs/                      # Documentation
+├── secrets/                   # Encrypted secrets
+├── cache/                     # Runtime caches
+├── logs/                      # Platform logs
+├── downloads/                 # Downloaded binaries
+├── templates/                 # Agent config templates
+├── backups/                   # Update snapshots
+└── .gitignore
 ```
 
-## Security
+---
 
-- Multi-dimensional permission model (agent × profile × tool risk × server trust)
-- Secrets encrypted at rest (age encryption)
-- All tool calls audited
-- Workspace boundaries enforced
-- Deny by default — explicit approval required for high-risk operations
+## Security Model
+
+- **Multi-dimensional authorization**: agent × profile × tool risk × server trust × workspace boundaries × approval policy
+- **Secrets management**: environment variables → encrypted files (age) → OS keychain → interactive prompt
+- **Audit logging**: every tool call logged with decision, agent, server, args, timestamp
+- **Workspace boundaries**: filesystem MCP restricted to project directory
+- **Deny by default**: high-risk tools require explicit approval
+
+---
+
+## Updating
+
+```bash
+# Check for updates
+mcp update check
+
+# Apply updates (backup is automatic)
+mcp update apply
+
+# Rollback a failed update
+mcp update rollback github
+
+# View update history
+mcp update history
+```
+
+---
 
 ## License
 
