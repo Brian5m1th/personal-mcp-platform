@@ -57,14 +57,14 @@ async def _run_apply(server_id: str | None):
             rprint(f"[dim]  {s['id']}: up-to-date ({result['current_version']})[/dim]")
             continue
 
-        rprint(f"  [cyan]{s['id']}[/cyan]: {result['current_version']} → {result['latest_version']}")
+        rprint(f"  [cyan]{s['id']}[/cyan]: {result['current_version']} -> {result['latest_version']}")
 
         # Create backup
         backup_id = updater.create_backup(
             s["id"], result["current_version"], result["latest_version"]
         )
         rprint(f"  [dim]  Backup: {backup_id}[/dim]")
-        rprint(f"  [green]  ✓ Update applied[/green]")
+        rprint(f"  [green]  v Update applied[/green]")
 
 
 async def _run_rollback(server_id: str, version: str | None):
@@ -72,9 +72,9 @@ async def _run_rollback(server_id: str, version: str | None):
     rprint(f"[bold]Rolling back '{server_id}'...[/bold]")
     result = await updater.rollback(server_id, version)
     if result:
-        rprint(f"[green]✓ Rollback successful[/green]")
+        rprint(f"[green]v Rollback successful[/green]")
     else:
-        rprint(f"[red]✗ Rollback failed[/red]")
+        rprint(f"[red]x Rollback failed[/red]")
 
 
 async def _run_history(server_id: str | None):

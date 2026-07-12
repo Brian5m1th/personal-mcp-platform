@@ -147,7 +147,7 @@ def project_cmd(
         }
         save_yaml(projects_file, projects)
 
-        rprint(f"[green]✓ MCP linked to project [bold]{project_name}[/bold][/green]")
+        rprint(f"[green]v MCP linked to project [bold]{project_name}[/bold][/green]")
         rprint(f"  Config: {config_path}")
         rprint(f"  Agent: {agent}")
         rprint(f"  Profile: {profile or 'full-stack'}")
@@ -162,7 +162,7 @@ def project_cmd(
                 rprint(f"[yellow]Removed: {config_path}[/yellow]")
             del projects["projects"][project_name]
             save_yaml(projects_file, projects)
-            rprint(f"[yellow]✓ MCP unlinked from [bold]{project_name}[/bold][/yellow]")
+            rprint(f"[yellow]v MCP unlinked from [bold]{project_name}[/bold][/yellow]")
         else:
             rprint(f"[yellow]Project '{project_name}' is not linked to MCP.[/yellow]")
 
@@ -176,9 +176,9 @@ def project_cmd(
             rprint(f"  Profile: {entry.get('profile', 'full-stack')}")
             config_path = Path(entry["config_file"])
             if config_path.exists():
-                rprint(f"  [green]✓ Config file exists[/green]")
+                rprint(f"  [green]v Config file exists[/green]")
             else:
-                rprint(f"  [red]✗ Config file missing[/red]")
+                rprint(f"  [red]x Config file missing[/red]")
         else:
             rprint(f"[yellow]Project '{project_name}' is not linked to MCP.[/yellow]")
             rprint(f"  Run [bold]mcp project add[/bold] in the project directory to link it.")
@@ -199,7 +199,7 @@ def project_cmd(
 
         for name, entry in sorted(projects["projects"].items()):
             config_path = Path(entry["config_file"])
-            status = "[green]✓[/green]" if config_path.exists() else "[red]✗[/red]"
+            status = "[green]v[/green]" if config_path.exists() else "[red]x[/red]"
             table.add_row(
                 name,
                 entry["path"],

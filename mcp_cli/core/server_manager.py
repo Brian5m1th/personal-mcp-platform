@@ -3,6 +3,7 @@ Server lifecycle manager — state machine, process management, health tracking.
 """
 
 import asyncio
+import os
 import time
 from enum import Enum
 from typing import Callable
@@ -53,7 +54,10 @@ class ManagedServer:
     def __init__(self, server_id: str, registry_entry: dict):
         self.id = server_id
         self.registry_entry = registry_entry
-        self.state: ServerState = ServerState.REGISTERED
+        # Check if server is already installed (has config in MCP_HOME/servers/)
+        from mcp_cli.core.config import get_server_config_path
+        config_path = get_server_config_path(server_id)
+        self.state: ServerState = ServerState.INSTALLED if config_path.exists() else ServerState.REGISTERED
         self.transport: MCPTransport | None = None
         self._tools_cache: list[dict] = []
         self._start_attempts: int = 0
@@ -71,7 +75,7 @@ class ManagedServer:
             )
         old_state = self.state
         self.state = new_state
-        logger.info(f"[{self.id}] {old_state.value} → {new_state.value}")
+        logger.info(f"[{self.id}] {old_state.value} -> {new_state.value}")
         for cb in self._on_state_change:
             cb(self.id, old_state, new_state)
 
@@ -87,6 +91,14 @@ class ManagedServer:
             )[0]
             self.transport = TransportFactory.create(transport_config)
             await self.transport.connect()
+
+            # Save PID for reconnect across CLI commands
+            info = self.transport.get_server_info()
+            if info.get("type") == "stdio" and info.get("pid"):
+                from mcp_cli.core.config import get_server_config_path, save_yaml, load_yaml
+                pid_path = get_server_config_path(f"{self.id}.pid")
+                import json
+                pid_path.write_text(json.dumps({"pid": info["pid"]}), encoding="utf-8")
 
             # MCP initialize handshake
             init_result = await self.transport.send_request("initialize", {
@@ -245,6 +257,7 @@ class ServerManager:
     def get_status_all(self) -> list[dict]:
         """Get status for all managed servers."""
         return [s.get_status() for s in self._servers.values()]
+
 
     def get_server(self, server_id: str) -> ManagedServer | None:
         return self._servers.get(server_id)

@@ -27,6 +27,6 @@ def generate_cmd(
     for a in agents:
         try:
             path = gen.save(a, output_path)
-            rprint(f"[green]✓ Generated [bold]{a}[/bold] config → {path}[/green]")
+            rprint(f"[green]v Generated [bold]{a}[/bold] config -> {path}[/green]")
         except Exception as e:
-            rprint(f"[red]✗ Failed to generate {a}: {e}[/red]")
+            rprint(f"[red]x Failed to generate {a}: {e}[/red]")

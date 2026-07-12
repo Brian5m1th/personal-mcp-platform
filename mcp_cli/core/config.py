@@ -117,10 +117,24 @@ class PlatformConfig:
         """Resolve the list of enabled servers based on active profile."""
         profile_name = self.active_profile.get("active_profiles", ["full-stack"])[0]
         profile = load_yaml(get_profile_path(profile_name))
-        enabled_ids = profile.get("enabled_servers", [])
-        if not enabled_ids:
+        enabled_entries = profile.get("enabled_servers", [])
+
+        if not enabled_entries:
             # Fallback: all servers in registry
             return self.registry.get("servers", [])
+
+        # enabled_entries can be either:
+        #   - list of strings: ["context7", "github", ...]
+        #   - list of dicts:  [{"id": "context7", "tools": "*"}, ...]
+        enabled_ids: list[str] = []
+        for entry in enabled_entries:
+            if isinstance(entry, str):
+                enabled_ids.append(entry)
+            elif isinstance(entry, dict):
+                eid = entry.get("id")
+                if eid:
+                    enabled_ids.append(eid)
+
         return [
             s for s in self.registry.get("servers", [])
             if s.get("id") in enabled_ids

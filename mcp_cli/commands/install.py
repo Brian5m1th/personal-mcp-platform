@@ -1,6 +1,7 @@
 """mcp install — Install MCP servers from the registry."""
 
 import asyncio
+import os
 import shutil
 import subprocess
 import sys
@@ -14,6 +15,31 @@ from mcp_cli.core.config import PlatformConfig, get_server_config_path, save_yam
 from mcp_cli.core.secrets import SecretsManager
 
 
+def _find_executable(name: str) -> str | None:
+    """Find an executable, checking common locations for npm/npx on Windows."""
+    # First try PATH
+    exe = shutil.which(name)
+    if exe:
+        return exe
+
+    # Check common Node.js installation paths
+    common_paths = [
+        r"C:\Program Files\nodejs",
+        r"C:\Program Files (x86)\nodejs",
+        os.path.expandvars(r"%APPDATA%\npm"),
+        os.path.expandvars(r"%LOCALAPPDATA%\npm"),
+        "/usr/local/bin",
+        "/usr/bin",
+        "/opt/homebrew/bin",
+    ]
+    for base in common_paths:
+        for ext in ["", ".cmd", ".exe", ".ps1"]:
+            candidate = os.path.join(base, f"{name}{ext}")
+            if os.path.isfile(candidate):
+                return candidate
+    return None
+
+
 async def _install_server(server_entry: dict) -> bool:
     """Install a single MCP server."""
     server_id = server_entry.get("id", "unknown")
@@ -23,10 +49,25 @@ async def _install_server(server_entry: dict) -> bool:
 
     rprint(f"\n[bold]Installing [cyan]{server_id}[/cyan]...")
 
+    # Build environment with nodejs in PATH
+    env = os.environ.copy()
+    node_paths = [
+        r"C:\Program Files\nodejs",
+        r"C:\Program Files (x86)\nodejs",
+        os.path.expandvars(r"%APPDATA%\npm"),
+        os.path.expandvars(r"%LOCALAPPDATA%\npm"),
+    ]
+    for np in node_paths:
+        if os.path.isdir(np) and np not in env.get("PATH", ""):
+            env["PATH"] = np + os.pathsep + env.get("PATH", "")
+
     if method == "npx":
-        # npm/npx-based install
+        npx_path = _find_executable("npx")
+        if not npx_path:
+            rprint(f"[red]  x npx not found. Install Node.js from https://nodejs.org (v18+)[/red]")
+            return False
         package = command.replace("npx ", "").strip()
-        cmd = ["npx", "-y", package]
+        cmd = [npx_path, "-y", package]
     elif method == "uvx":
         cmd = ["uvx", command.replace("uvx ", "").strip()]
     elif method == "pip":
@@ -46,9 +87,10 @@ async def _install_server(server_entry: dict) -> bool:
             capture_output=True,
             text=True,
             timeout=120,
+            env=env,
         )
         if proc.returncode == 0:
-            rprint(f"[green]  ✓ Installed successfully[/green]")
+            rprint(f"[green]  v Installed successfully[/green]")
 
             # Save server config
             config_path = get_server_config_path(server_id)
@@ -60,13 +102,13 @@ async def _install_server(server_entry: dict) -> bool:
             })
             return True
         else:
-            rprint(f"[red]  ✗ Install failed: {proc.stderr[:200]}[/red]")
+            rprint(f"[red]  x Install failed: {proc.stderr[:200]}[/red]")
             return False
     except subprocess.TimeoutExpired:
-        rprint(f"[red]  ✗ Install timed out after 120s[/red]")
+        rprint(f"[red]  x Install timed out after 120s[/red]")
         return False
     except FileNotFoundError:
-        rprint(f"[red]  ✗ Command not found. Is Node.js/npm installed?[/red]")
+        rprint(f"[red]  x Command not found. Is Node.js/npm installed?[/red]")
         return False
 
 
@@ -105,7 +147,7 @@ def install_cmd(
         for s in servers_to_install:
             missing = secrets.check_all_required(s)
             if missing:
-                rprint(f"[yellow]  ⚠ Server '{s['id']}' requires secrets: {', '.join(missing)}[/yellow]")
+                rprint(f"[yellow]  ! Server '{s['id']}' requires secrets: {', '.join(missing)}[/yellow]")
                 rprint(f"  [dim]  Set environment variables or run: [bold]mcp secrets set {s['id']}[/bold][/dim]")
 
     # Install
