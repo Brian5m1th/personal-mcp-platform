@@ -6,7 +6,6 @@ import asyncio
 import json
 import os
 import shutil
-import subprocess
 import sys
 import time
 from abc import ABC, abstractmethod
@@ -279,6 +278,83 @@ class SSETransport(MCPTransport):
             return {"status": "down", "latency_ms": latency_ms, "error": str(e)}
 
 
+# ── WebSocket Transport ────────────────────────────────────────
+
+
+class WebSocketTransport(MCPTransport):
+    """WebSocket-based transport for remote MCP servers."""
+
+    def __init__(self, config: dict):
+        self._url: str = config.get("url", "")
+        self._headers: dict = config.get("headers", {})
+        self._ws = None
+        self._connected_at: float | None = None
+
+    async def connect(self) -> bool:
+        if not self._url:
+            raise TransportConnectionError("No URL configured")
+        try:
+            import websockets
+            self._ws = await websockets.connect(self._url, extra_headers=self._headers)
+            self._connected_at = time.time()
+            logger.info(f"[ws] Connected to {self._url}")
+            return True
+        except ImportError:
+            raise TransportConnectionError("websockets library not installed. Run: pip install websockets")
+        except Exception as e:
+            raise TransportConnectionError(f"WebSocket connection failed: {e}")
+
+    async def disconnect(self) -> bool:
+        if self._ws:
+            await self._ws.close()
+            self._ws = None
+        self._connected_at = None
+        return True
+
+    async def send_request(self, method: str, params: dict) -> dict:
+        if not self._ws:
+            raise TransportConnectionError("Not connected")
+        req_id = int(time.time() * 1000)
+        req = {"jsonrpc": "2.0", "id": req_id, "method": method, "params": params}
+        try:
+            await self._ws.send(json.dumps(req))
+            resp = await asyncio.wait_for(self._ws.recv(), timeout=30)
+            data = json.loads(resp)
+            if "error" in data:
+                raise TransportError(f"Server error: {data['error']}")
+            return data.get("result", {})
+        except asyncio.TimeoutError:
+            raise TransportTimeoutError("Request timed out after 30s")
+        except Exception as e:
+            raise TransportError(f"WebSocket request failed: {e}")
+
+    async def send_notification(self, method: str, params: dict) -> None:
+        if not self._ws:
+            return
+        notif = {"jsonrpc": "2.0", "method": method, "params": params}
+        try:
+            await self._ws.send(json.dumps(notif))
+        except Exception:
+            pass
+
+    def get_server_info(self) -> dict:
+        return {
+            "type": "websocket",
+            "url": self._url,
+            "connected_at": self._connected_at,
+        }
+
+    async def health_check(self) -> dict:
+        t0 = time.monotonic()
+        try:
+            result = await self.send_request("ping", {})
+            latency_ms = int((time.monotonic() - t0) * 1000)
+            return {"status": "healthy", "latency_ms": latency_ms, "error": None}
+        except Exception as e:
+            latency_ms = int((time.monotonic() - t0) * 1000)
+            return {"status": "down", "latency_ms": latency_ms, "error": str(e)}
+
+
 # ── Transport Factory ──────────────────────────────────────────
 
 
@@ -295,5 +371,7 @@ class TransportFactory:
         elif transport_type == "http":
             # HTTP transport (direct request-response, no SSE)
             return SSETransport(transport_config)
+        elif transport_type == "websocket":
+            return WebSocketTransport(transport_config)
         else:
             raise ValueError(f"Unsupported transport type: {transport_type}")
