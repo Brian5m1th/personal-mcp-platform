@@ -43,6 +43,7 @@ from mcp_cli.commands.health import health_cmd
 from mcp_cli.commands.registry_cmd import registry_cmd
 from mcp_cli.commands.config import config_cmd
 from mcp_cli.commands.benchmark import benchmark_cmd
+from mcp_cli.commands.project import project_cmd
 
 app.command(name="install")(install_cmd)
 app.command(name="start")(start_cmd)
@@ -57,6 +58,7 @@ app.command(name="health")(health_cmd)
 app.command(name="registry")(registry_cmd)
 app.command(name="config")(config_cmd)
 app.command(name="benchmark")(benchmark_cmd)
+app.command(name="project")(project_cmd)
 
 
 if __name__ == "__main__":
