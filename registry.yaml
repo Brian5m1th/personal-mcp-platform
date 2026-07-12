@@ -80,9 +80,10 @@ servers:
     default: stdio
     transports:
     - type: stdio
-      command: uvx
+      command: npx
       args:
-      - serena-mcp
+      - -y
+      - serena-slim
       env: {}
   permissions:
     filesystem: read
@@ -112,8 +113,8 @@ servers:
   - symbols
   - refactoring
   install:
-    method: uvx
-    command: uvx serena-mcp
+    method: npx
+    command: npx serena-slim
     auto_update: true
     update_policy: minor
   health:
