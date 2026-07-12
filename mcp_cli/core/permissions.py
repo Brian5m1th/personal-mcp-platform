@@ -2,6 +2,7 @@
 Authorization engine — multi-dimensional permission evaluation.
 """
 
+import asyncio
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
@@ -97,7 +98,32 @@ class AuthorizationEngine:
     def __init__(self):
         self._tool_risk_overrides: dict[str, ToolRiskLevel] = {}
         self._server_trust_overrides: dict[str, ServerTrustLevel] = {}
-        self._approval_rules: list[dict] = []
+        self._pending_approvals: dict[str, asyncio.Event] = {}
+        self._approved_set: set[str] = set()
+        self._console = None
+
+    def _get_approval(self, server_id: str, tool_name: str, tool_args: dict | None) -> bool:
+        """Prompt the user for interactive approval of a high-risk tool call."""
+        key = f"{server_id}:{tool_name}"
+        import json
+        from rich.console import Console
+        from rich.prompt import Confirm
+
+        if key in self._approved_set:
+            return True
+
+        console = Console()
+        console.print(f"\n[yellow]⚠  Approval Required[/yellow]")
+        console.print(f"  Server: [cyan]{server_id}[/cyan]")
+        console.print(f"  Tool: [bold]{tool_name}[/bold]")
+        if tool_args:
+            console.print(f"  Args: {json.dumps(tool_args, indent=2)}")
+
+        result = Confirm.ask("  Allow this operation?", default=False)
+        if result:
+            self._approved_set.add(key)
+            return True
+        return False
 
     def evaluate(
         self,
@@ -157,11 +183,14 @@ class AuthorizationEngine:
                     evaluated_at=time.time(),
                 )
             elif risk == ToolRiskLevel.HIGH:
+                approved = self._get_approval(server_id, tool_name, tool_args)
+                decision = AuthorizationDecision.ALLOW if approved else AuthorizationDecision.DENY
                 return AuthorizationResult(
-                    decision=AuthorizationDecision.PENDING_APPROVAL,
-                    reason=f"High trust + high risk = REQUIRES APPROVAL",
+                    decision=decision,
+                    reason=f"High trust + high risk = {'ALLOWED (approved)' if approved else 'DENIED (rejected)'}",
                     server_id=server_id,
                     tool_name=tool_name,
+                    tool_args=tool_args or {},
                     context=context,
                     evaluated_at=time.time(),
                 )
@@ -186,11 +215,14 @@ class AuthorizationEngine:
                     evaluated_at=time.time(),
                 )
             elif risk == ToolRiskLevel.MEDIUM:
+                approved = self._get_approval(server_id, tool_name, tool_args)
+                decision = AuthorizationDecision.ALLOW if approved else AuthorizationDecision.DENY
                 return AuthorizationResult(
-                    decision=AuthorizationDecision.PENDING_APPROVAL,
-                    reason=f"Medium trust + medium risk = REQUIRES APPROVAL",
+                    decision=decision,
+                    reason=f"Medium trust + medium risk = {'ALLOWED (approved)' if approved else 'DENIED (rejected)'}",
                     server_id=server_id,
                     tool_name=tool_name,
+                    tool_args=tool_args or {},
                     context=context,
                     evaluated_at=time.time(),
                 )

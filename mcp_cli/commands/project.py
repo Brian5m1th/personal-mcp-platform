@@ -220,10 +220,12 @@ def project_cmd(
 
     elif action == "add-server":
         if not path:
-            rprint("[red]Error: --path/-p is required for add-server. Usage:
-  mcp project add-server --name my-server --cmd npx --args -y,some-package,--extra-arg
-  mcp project add-server --name my-server --cmd python --args -m,my_mcp_server
-  mcp project add-server --name my-server --cmd node --args server.js[/red]")
+            rprint("[red]Error: --path/-p is required for add-server.[/red]")
+            rprint("")
+            rprint("[yellow]Usage examples:[/yellow]")
+            rprint("  mcp project add-server --name my-server --cmd npx --args -y,some-package,--extra-arg")
+            rprint("  mcp project add-server --name my-server --cmd python --args -m,my_mcp_server")
+            rprint("  mcp project add-server --name my-server --cmd node --args server.js")
             raise typer.Exit(1)
         # Parse args from comma-separated string
         command_parts = path.split(",")

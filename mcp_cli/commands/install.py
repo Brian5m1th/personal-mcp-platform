@@ -86,13 +86,13 @@ async def _install_server(server_entry: dict) -> bool:
         return False
 
     try:
-        proc = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=120,
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
             env=env,
         )
+        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=120)
         if proc.returncode == 0:
             rprint(f"[green]  v Installed successfully[/green]")
 
@@ -106,9 +106,9 @@ async def _install_server(server_entry: dict) -> bool:
             })
             return True
         else:
-            rprint(f"[red]  x Install failed: {proc.stderr[:200]}[/red]")
+            rprint(f"[red]  x Install failed: {stderr.decode(errors='replace')[:200]}[/red]")
             return False
-    except subprocess.TimeoutExpired:
+    except asyncio.TimeoutError:
         rprint(f"[red]  x Install timed out after 120s[/red]")
         return False
     except FileNotFoundError:
@@ -135,9 +135,17 @@ def install_cmd(
         servers_to_install.append(entry)
     else:
         # Install by tier
+        # Tier 1: no plan field or plan=phase-1
+        # Tier 2: plan=phase-2
+        # Tier 3: plan=phase-3 or no plan with tier=3
         all_servers = config.registry.get("servers", [])
         for s in all_servers:
-            if s.get("plan") == f"phase-{tier}" or (not s.get("plan") and tier == "1"):
+            plan = s.get("plan", "")
+            if tier == "1" and (not plan or plan == "phase-1"):
+                servers_to_install.append(s)
+            elif tier == "2" and plan == "phase-2":
+                servers_to_install.append(s)
+            elif tier == "3" and plan == "phase-3":
                 servers_to_install.append(s)
 
     if not servers_to_install:

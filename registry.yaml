@@ -94,8 +94,8 @@ servers:
     - level: low
       description: Reads project files for code analysis
   requirements:
-    python: '>=3.10'
-    uv: true
+    node: '>=18'
+    npm: true
   agents:
   - claude-code
   - opencode
@@ -677,6 +677,21 @@ servers:
   - search
   - embeddings
   - qdrant
+  install:
+    method: npx
+    command: npx @qdrant/mcp-server
+    auto_update: true
+    update_policy: minor
+  health:
+    check_method: tools/list
+    expected_startup_ms: 8000
+    expected_latency_ms: 500
+    expected_ram_mb: 120
+  benchmark:
+    startup_ms: 4000
+    ram_mb: 80
+    latency_ms: 300
+    stability: 0.90
   plan: phase-2
 - id: obsidian
   name: Obsidian MCP
@@ -709,6 +724,21 @@ servers:
   - notes
   - knowledge
   - vault
+  install:
+    method: npx
+    command: npx mcp-obsidian
+    auto_update: true
+    update_policy: minor
+  health:
+    check_method: tools/list
+    expected_startup_ms: 5000
+    expected_latency_ms: 300
+    expected_ram_mb: 80
+  benchmark:
+    startup_ms: 2000
+    ram_mb: 60
+    latency_ms: 200
+    stability: 0.90
   plan: phase-2
 - id: n8n
   name: n8n MCP
@@ -743,6 +773,21 @@ servers:
   - automation
   - workflows
   - n8n
+  install:
+    method: npx
+    command: npx n8n-mcp
+    auto_update: true
+    update_policy: minor
+  health:
+    check_method: tools/list
+    expected_startup_ms: 8000
+    expected_latency_ms: 500
+    expected_ram_mb: 100
+  benchmark:
+    startup_ms: 5000
+    ram_mb: 70
+    latency_ms: 400
+    stability: 0.85
   plan: phase-2
 - id: cloudflare
   name: Cloudflare MCP
@@ -776,4 +821,88 @@ servers:
   - dns
   - workers
   - cdn
+  install:
+    method: npx
+    command: npx @cloudflare/mcp-server
+    auto_update: true
+    update_policy: minor
+  health:
+    check_method: tools/list
+    expected_startup_ms: 6000
+    expected_latency_ms: 500
+    expected_ram_mb: 80
+  benchmark:
+    startup_ms: 3000
+    ram_mb: 50
+    latency_ms: 400
+    stability: 0.90
   plan: phase-2
+- id: tavily
+  name: Tavily MCP
+  version: 1.0.0
+  category: web-research
+  description: Professional web search and research via Tavily API. Provides accurate, up-to-date search results optimized for AI agents.
+  maintainer:
+    name: Tavily
+    url: https://tavily.com
+    github: tavily-ai/tavily-mcp
+  license: MIT
+  maturity: stable
+  protocol:
+    default: stdio
+    transports:
+    - type: stdio
+      command: npx
+      args:
+      - -y
+      - tavily-mcp
+      env:
+        TAVILY_API_KEY: ${secrets.tavily.api_key}
+  permissions:
+    filesystem: none
+    network: https-outbound
+    shell: false
+    secrets:
+    - TAVILY_API_KEY
+    risks:
+    - level: low
+      description: Network outbound to tavily.com for web search
+  requirements:
+    node: '>=18'
+    npm: true
+    secrets:
+      TAVILY_API_KEY:
+        description: Tavily API key for web search
+        required: true
+        source: environment
+  agents:
+  - claude-code
+  - opencode
+  - antigravity
+  - cursor
+  - vscode
+  platforms:
+  - linux
+  - macos
+  - windows
+  - wsl
+  tags:
+  - web
+  - search
+  - research
+  - tavily
+  install:
+    method: npx
+    command: npx tavily-mcp
+    auto_update: true
+    update_policy: minor
+  health:
+    check_method: tools/list
+    expected_startup_ms: 5000
+    expected_latency_ms: 1000
+    expected_ram_mb: 60
+  benchmark:
+    startup_ms: 2000
+    ram_mb: 40
+    latency_ms: 800
+    stability: 0.95
