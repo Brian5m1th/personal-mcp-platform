@@ -2,6 +2,7 @@
 Secrets manager — resolves secret values from env vars, encrypted files, and OS keychain.
 """
 
+import json
 import os
 from pathlib import Path
 from typing import Optional
@@ -17,6 +18,33 @@ class SecretsManager:
     def __init__(self):
         self._secrets_dir = get_mcp_home() / "secrets"
         self._secrets_dir.mkdir(parents=True, exist_ok=True)
+        self._encryption_key: Optional[bytes] = None
+
+    def _load_encryption_key(self) -> Optional[bytes]:
+        """Load the platform encryption key, creating one if needed."""
+        key_file = self._secrets_dir / ".key"
+        if key_file.exists():
+            return key_file.read_bytes()
+        try:
+            from cryptography.fernet import Fernet
+            key = Fernet.generate_key()
+            key_file.write_bytes(key)
+            key_file.chmod(0o600)
+            return key
+        except ImportError:
+            return None
+
+    def _get_fernet(self):
+        """Get a Fernet instance using the platform encryption key."""
+        if self._encryption_key is None:
+            self._encryption_key = self._load_encryption_key()
+        if self._encryption_key is None:
+            return None
+        try:
+            from cryptography.fernet import Fernet
+            return Fernet(self._encryption_key)
+        except ImportError:
+            return None
 
     def resolve(self, secret_ref: str) -> Optional[str]:
         """Resolve a secret reference to its value.
@@ -32,10 +60,26 @@ class SecretsManager:
         if env_val is not None:
             return env_val
 
-        # 2. Check encrypted file (key format: "secrets.<name>.<key>")
+        # 2. Check encrypted store
         parts = secret_ref.replace("${", "").replace("}", "").split(".")
         if len(parts) >= 2 and parts[0] == "secrets":
             secret_name = parts[1]
+            # Try encrypted file first
+            enc_file = self._secrets_dir / f"{secret_name}.enc"
+            if enc_file.exists():
+                try:
+                    encrypted_data = enc_file.read_bytes()
+                    fernet = self._get_fernet()
+                    if fernet:
+                        decrypted = fernet.decrypt(encrypted_data)
+                        store = json.loads(decrypted)
+                        if len(parts) >= 3:
+                            return store.get(parts[2])
+                        return store.get("value")
+                except Exception as e:
+                    logger.warning(f"[secrets] Failed to decrypt {enc_file}: {e}")
+
+            # Fallback to plain YAML (legacy)
             secret_file = self._secrets_dir / f"{secret_name}.yaml"
             if secret_file.exists():
                 try:
@@ -48,7 +92,6 @@ class SecretsManager:
                 except Exception as e:
                     logger.warning(f"[secrets] Failed to read {secret_file}: {e}")
 
-        # 3. Fallback: prompt (non-interactive, return None)
         return None
 
     def check_all_required(self, server_entry: dict) -> list[str]:
@@ -62,7 +105,6 @@ class SecretsManager:
         for secret_name, secret_info in req_secrets.items():
             resolved = self.resolve(secret_name)
             if resolved is None:
-                # Try GITHUB_TOKEN-style name
                 resolved = self.resolve(secret_info.get("env_var", secret_name))
             if resolved is None and secret_info.get("required", True):
                 missing.append(secret_name)
@@ -70,6 +112,20 @@ class SecretsManager:
 
     def set_env(self, secret_name: str, value: str) -> None:
         """Set a secret in the encrypted store."""
+        fernet = self._get_fernet()
+        if fernet:
+            try:
+                enc_file = self._secrets_dir / f"{secret_name}.enc"
+                store = {"value": value}
+                encrypted = fernet.encrypt(json.dumps(store).encode())
+                enc_file.write_bytes(encrypted)
+                enc_file.chmod(0o600)
+                logger.info(f"[secrets] Stored '{secret_name}' (encrypted)")
+                return
+            except Exception as e:
+                logger.warning(f"[secrets] Encryption failed, falling back to plain: {e}")
+
+        # Fallback: plain YAML (legacy)
         secret_file = self._secrets_dir / f"{secret_name}.yaml"
         import yaml
         data = {}
@@ -79,7 +135,6 @@ class SecretsManager:
         data["value"] = value
         with open(secret_file, "w") as f:
             yaml.dump(data, f)
-        # Set restrictive permissions (Unix only)
         try:
             secret_file.chmod(0o600)
         except Exception:
