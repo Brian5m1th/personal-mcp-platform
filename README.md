@@ -1,296 +1,234 @@
 # Personal AI Engineering Platform — MCP
 
-> Universal MCP Infrastructure for AI-Assisted Development.
-> Works with Claude Code · OpenCode · Antigravity · Cursor · VS Code AI.
+> **Universal MCP Infrastructure** for AI-Assisted Development.
+> Works with Claude Code, OpenCode, Antigravity, Cursor, VS Code AI.
 > Reusable across every software project you develop.
+
+---
+
+## 📋 Índice
+
+- [O que é?](#o-que-é)
+- [Quick Start](#quick-start)
+- [Para Usuários](#para-usuários)
+  - [Instalação](#instalação)
+  - [Comandos](#comandos)
+  - [Perfis](#perfis)
+  - [Vincular a um Projeto](#vincular-a-um-projeto)
+  - [Adicionar Servidor Customizado](#adicionar-servidor-customizado)
+- [Para Desenvolvedores](#para-desenvolvedores)
+  - [Arquitetura](#arquitetura)
+  - [Repositório](#repositório)
+  - [Adicionar Servidor ao Registry](#adicionar-servidor-ao-registry)
+  - [Testes](#testes)
+- [Servidores Disponíveis](#servidores-disponíveis)
+- [Solução de Problemas](#solução-de-problemas)
+- [Documentação](#documentação)
+
+---
+
+## O que é?
+
+Esta plataforma gerencia **servidores MCP** (Context7, GitHub, Filesystem, Playwright, PostgreSQL, Docker, etc.)
+e disponibiliza as ferramentas deles para **qualquer agente de IA compatível com MCP**.
+
+| Agente | Arquivo de Config |
+|--------|-------------------|
+| **OpenCode** | `.opencode/opencode.json` no projeto |
+| **Claude Code** | `~/.claude.json` |
+| **Cursor** | `~/.cursor/mcp.json` |
+| **VS Code AI** | `.vscode/settings.json` no projeto |
+| **Antigravity** | `~/.antigravity/mcp.json` |
+
+### Como funciona
+
+```
+Voce executa:  mcp start
+                   │
+          Servidores MCP rodando
+          (GitHub, Filesystem, etc.)
+                   │
+     OpenCode / Claude Code / Cursor
+          usam as ferramentas
+                   │
+         Codigo mais inteligente,
+         documentacao viva,
+         PRs automaticos,
+         testes E2E
+```
+
+### Conceito
+
+Em vez de configurar MCP manualmente em cada projeto, você mantém **um único lugar** (`~/.config/mcp/`)
+e usa `mcp project add` para vincular qualquer projeto à plataforma.
+
+```
+Projeto A (K.A.O.S) ──┐
+Projeto B (Wakanda) ──┤── mcp platform (um unico lugar)
+Projeto C (API) ──────┘
+```
 
 ---
 
 ## Quick Start
 
-### 🪟 Windows
+### Windows (PowerShell)
 
 ```powershell
-# 1. Abrir PowerShell como Administrador e executar:
 cd C:\workspace\Extras\personal-mcp-platform
-.\scripts\install.ps1
-
-# 2. Adicionar ao PATH (executar apenas uma vez):
-$env:Path += ";$env:APPDATA\Python\Scripts"
-[Environment]::SetEnvironmentVariable("Path", "$env:Path;$env:APPDATA\Python\Scripts", "User")
-
-# 3. Adicionar ao seu projeto:
-cd C:\workspace\SeuProjeto
-mcp project add --agent opencode
-
-# 4. Iniciar servidores:
-mcp start
+.\scripts\install.ps1                           # Instala servidores
+mcp project add --agent opencode                # Vincula ao projeto
+mcp start                                       # Inicia servidores
 ```
 
-### 🐧 Linux
+### Linux / macOS
 
 ```bash
-# 1. Clonar e instalar:
 cd ~
 git clone https://github.com/Brian5m1th/personal-mcp-platform.git
 cd personal-mcp-platform
-pip install -e .
-
-# 2. Executar setup:
 ./scripts/install.sh
-
-# 3. Adicionar ao seu projeto:
-cd ~/workspace/SeuProjeto
 mcp project add --agent opencode
-
-# 4. Iniciar servidores:
 mcp start
 ```
 
-### 🍎 macOS
+### Docker (qualquer sistema)
 
 ```bash
-# 1. Clonar e instalar:
-cd ~
-git clone https://github.com/Brian5m1th/personal-mcp-platform.git
-cd personal-mcp-platform
-pip install -e .
-
-# 2. Executar setup:
-./scripts/install.sh
-
-# 3. Adicionar ao seu projeto:
-cd ~/workspace/SeuProjeto
-mcp project add --agent opencode
-
-# 4. Iniciar servidores:
-mcp start
-```
-
-### 🐳 Docker (qualquer sistema)
-
-```bash
-git clone https://github.com/Brian5m1th/personal-mcp-platform.git
-cd personal-mcp-platform
 docker compose -f docker/docker-compose.yml --profile full up -d
 ```
 
 ---
 
-## O que é isso?
+# Para Usuários
 
-Uma **Plataforma Pessoal de Engenharia de IA** baseada no Model Context Protocol (MCP).
-
-Ela gerencia servidores MCP (Context7, GitHub, Filesystem, Playwright, PostgreSQL, Docker, etc.)
-e disponibiliza as ferramentas deles para qualquer agente de IA compatível com MCP:
-
-- ✅ **Claude Code** — usa os servidores via `~/.claude.json`
-- ✅ **OpenCode** — usa via `.opencode.json` no projeto
-- ✅ **Cursor** — usa via `.cursor/mcp.json`
-- ✅ **VS Code AI** — usa via `.vscode/settings.json`
-- ✅ **Antigravity** — usa via `~/.antigravity/mcp.json`
-
-Em vez de configurar MCP manualmente em cada projeto, você mantém **um único lugar**
-e usa `mcp project add` para vincular qualquer projeto à plataforma.
-
----
-
-## Instalação Completa
+## Instalação
 
 ### Pré-requisitos
 
-| Programa | Versão Mínima | Verificar Instalação |
-|----------|---------------|----------------------|
-| **Python** | 3.11+ | `python --version` |
-| **Node.js** | 18+ | `node --version` |
-| **npm** | 9+ | `npm --version` |
-| **Git** | 2+ | `git --version` |
-| **Docker** (opcional) | 24+ | `docker --version` |
+| Programa | Versão | Verificar |
+|----------|--------|-----------|
+| **Python** | ≥ 3.11 | `python --version` |
+| **Node.js** | ≥ 18 | `node --version` |
+| **npm** | ≥ 9 | `npm --version` |
+| **Git** | ≥ 2 | `git --version` |
 
-### Método 1 — PowerShell (Windows, recomendado)
+### Métodos de Instalação
 
-```powershell
-# Instalação completa com um comando:
-.\scripts\install.ps1
+| Método | Comando | Quando usar |
+|--------|---------|-------------|
+| **PowerShell** (Windows) | `.\scripts\install.ps1` | Recomendado para Windows |
+| **Shell Script** (Linux/macOS) | `./scripts/install.sh` | Recomendado para Linux/macOS |
+| **Pip** (qualquer OS) | `pip install -e .` | Quando ja tem Python |
+| **Docker** (qualquer OS) | `docker compose up -d` | Para ambientes isolados |
 
-# Opções:
-.\scripts\install.ps1 -ServerId github     # Instalar apenas um servidor
-.\scripts\install.ps1 -Profile minimal      # Instalar com perfil minimal
-.\scripts\install.ps1 -DryRun               # Preview sem instalar
-.\scripts\install.ps1 help                  # Ajuda completa
-```
+### Pós-instalação
 
-O instalador faz tudo automaticamente:
-1. Verifica pré-requisitos (Node, npm, Python, Git)
-2. Cria estrutura de diretórios em `%APPDATA%/mcp/`
-3. Instala servidores Tier 1 (Context7, GitHub, Filesystem, Sequential Thinking)
-4. Gera arquivos de configuração para Claude Code e OpenCode
-5. Gera todos os 9 perfis de engenharia
-
-### Método 2 — Shell Script (Linux/macOS)
-
-```bash
-# Dar permissão de execução:
-chmod +x scripts/install.sh
-
-# Executar:
-./scripts/install.sh
-
-# Opções:
-./scripts/install.sh --server github
-./scripts/install.sh --profile minimal
-./scripts/install.sh --dry-run
-```
-
-### Método 3 — Pip (qualquer sistema)
-
-```bash
-# Instalar o CLI via pip:
-cd personal-mcp-platform
-pip install -e .
-
-# Verificar instalação:
-mcp --version
-
-# Copiar registry e perfis para o diretório da plataforma:
-# (o CLI faz isso automaticamente no primeiro uso)
-mcp config show
-```
-
-### Método 4 — Docker (qualquer sistema)
-
-```bash
-# Iniciar todos os servidores em containers:
-docker compose -f docker/docker-compose.yml --profile full up -d
-
-# Verificar saúde:
-curl http://localhost:8080/health
-
-# Parar:
-docker compose -f docker/docker-compose.yml down
-```
-
----
-
-## Pós-instalação
-
-### 1. Configurar Token do GitHub (obrigatório para GitHub MCP)
+**1. Token do GitHub (obrigatório para GitHub MCP):**
 
 ```powershell
-# Windows (PowerShell):
-$env:GITHUB_TOKEN = "ghp_seu_token_aqui"
-
-# Para tornar permanente:
+# Windows (torna permanente):
 [Environment]::SetEnvironmentVariable("GITHUB_TOKEN", "ghp_seu_token_aqui", "User")
-```
 
-```bash
-# Linux/macOS:
-export GITHUB_TOKEN="ghp_seu_token_aqui"
-
-# Para tornar permanente, adicione ao ~/.bashrc ou ~/.zshrc:
+# Linux/macOS (adiciona ao ~/.bashrc):
 echo 'export GITHUB_TOKEN="ghp_seu_token_aqui"' >> ~/.bashrc
 ```
 
-### 2. Verificar instalação
+**2. Verificar instalação:**
 
 ```bash
-mcp config show        # Ver diretórios da plataforma
-mcp registry list      # Ver servidores disponíveis
-mcp profile list       # Ver perfis disponíveis
-mcp profile current    # Ver perfil ativo
+mcp config show        # Caminhos da plataforma
+mcp registry list      # Servidores disponiveis
+mcp profile list       # Perfis de engenharia
 ```
 
-### 3. Vincular a um projeto
+**3. Vincular projeto e iniciar:**
 
 ```bash
-# Dentro do diretório do seu projeto:
-cd C:\workspace\Freelancer\K.A.O.S
+cd C:\workspace\SeuProjeto
 mcp project add --agent opencode
-
-# Ou para Claude Code:
-mcp project add --agent claude-code
-
-# Verificar status do projeto:
-mcp project status
-
-# Listar todos os projetos vinculados:
-mcp project list
-
-# Remover MCP de um projeto:
-mcp project remove
-```
-
-### 4. Iniciar servidores
-
-```bash
-# Iniciar todos os servidores do perfil ativo:
 mcp start
-
-# Iniciar com perfil específico:
-mcp start --profile backend
-
-# Verificar status:
-mcp status
-```
-
-### 5. Testar
-
-```bash
-# Verificar saúde:
-mcp health check
-
-# Ver servidores rodando:
-mcp status
-
-# Executar benchmark:
-mcp benchmark github
 ```
 
 ---
 
-## Comandos Completos
+## Comandos
 
-| Comando | Descrição | Exemplo |
-|---------|-----------|---------|
-| `mcp install [server]` | Instalar servidor(es) | `mcp install github` |
-| `mcp install --tier 1` | Instalar todos do Tier 1 | `mcp install --tier 1` |
-| `mcp start` | Iniciar servidores | `mcp start --profile backend` |
-| `mcp stop [server]` | Parar servidor(es) | `mcp stop docker` |
-| `mcp restart <server>` | Reiniciar servidor | `mcp restart github` |
-| `mcp status` | Status de todos | `mcp status` |
-| `mcp emergency stop` | Parar tudo agora | `mcp emergency stop` |
-| `mcp project add` | Vincular projeto atual | `mcp project add --agent claude-code` |
-| `mcp project remove` | Desvincular projeto | `mcp project remove` |
-| `mcp project list` | Listar projetos vinculados | `mcp project list` |
-| `mcp project status` | Status do vínculo | `mcp project status` |
-| `mcp profile set <nome>` | Trocar perfil | `mcp profile set ai-llm` |
-| `mcp profile list` | Listar perfis | `mcp profile list` |
-| `mcp generate <agent>` | Gerar config do agente | `mcp generate claude-code` |
-| `mcp update check` | Verificar atualizações | `mcp update check` |
-| `mcp update apply` | Aplicar atualizações | `mcp update apply` |
-| `mcp update rollback <s>` | Reverter atualização | `mcp update rollback github` |
-| `mcp update history` | Histórico de updates | `mcp update history` |
-| `mcp health check` | Verificar saúde | `mcp health check` |
-| `mcp health metrics` | Métricas detalhadas | `mcp health metrics --server github` |
-| `mcp health summary` | Resumo de saúde | `mcp health summary` |
-| `mcp registry list` | Listar servidores | `mcp registry list` |
-| `mcp registry search <q>` | Buscar servidores | `mcp registry search database` |
-| `mcp registry info <id>` | Detalhes do servidor | `mcp registry info github` |
-| `mcp config show` | Ver configuração | `mcp config show` |
-| `mcp config edit` | Editar configuração | `mcp config edit` |
-| `mcp benchmark [srv]` | Benchmark | `mcp benchmark github` |
-| `mcp --version` | Versão | `mcp --version` |
+### Gerenciamento de Servidores
+
+| Comando | Descrição |
+|---------|-----------|
+| `mcp start` | Inicia todos os servidores do perfil ativo |
+| `mcp start --detach` | Inicia em background (PID tracking) |
+| `mcp stop [server]` | Para servidor(es) |
+| `mcp status` | Mostra status de todos |
+| `mcp restart <server>` | Reinicia um servidor |
+| `mcp emergency stop` | Para TUDO imediatamente |
+
+### Instalação
+
+| Comando | Descrição |
+|---------|-----------|
+| `mcp install github` | Instala um servidor especifico |
+| `mcp install --tier 1` | Instala todos do Tier 1 (core) |
+| `mcp install --tier 2` | Instala todos do Tier 2 |
+
+### Projetos
+
+| Comando | Descrição |
+|---------|-----------|
+| `mcp project add` | Vincula MCP ao projeto atual |
+| `mcp project remove` | Desvincula MCP do projeto |
+| `mcp project list` | Lista todos os projetos vinculados |
+| `mcp project status` | Status do vinculo do projeto |
+| `mcp project add-server` | Adiciona servidor MCP customizado |
+
+### Perfis
+
+| Comando | Descrição |
+|---------|-----------|
+| `mcp profile list` | Lista todos os perfis |
+| `mcp profile set <nome>` | Ativa um perfil |
+| `mcp profile current` | Mostra perfil ativo |
+
+### Atualizações
+
+| Comando | Descrição |
+|---------|-----------|
+| `mcp update check` | Verifica atualizações disponiveis |
+| `mcp update apply` | Aplica atualizações (com backup) |
+| `mcp update rollback <s>` | Reverte atualização |
+| `mcp update history` | Historico de atualizacoes |
+
+### Monitoramento
+
+| Comando | Descrição |
+|---------|-----------|
+| `mcp health check` | Saude dos servidores |
+| `mcp health metrics` | Metricas detalhadas |
+| `mcp health summary` | Resumo de saude |
+| `mcp benchmark [srv]` | Benchmark de performance |
+
+### Configuração
+
+| Comando | Descrição |
+|---------|-----------|
+| `mcp config show` | Mostra configuracao atual |
+| `mcp config edit` | Abre configuracao no editor |
+| `mcp registry list` | Lista servidores do catalogo |
+| `mcp registry search <q>` | Busca servidores |
+| `mcp registry info <id>` | Detalhes de um servidor |
+| `mcp generate <agent>` | Gera config para Claude/OpenCode/VS Code/Cursor |
+| `mcp --version` | Versao instalada |
 
 ---
 
-## Perfis de Engenharia
+## Perfis
 
-Cada perfil ativa apenas os servidores relevantes para aquela área.
-Isso reduz consumo de memória e melhora a qualidade das respostas da IA.
+Cada perfil ativa **apenas os servidores relevantes** para aquela area de trabalho:
 
 | Perfil | Foco | Servidores | Como Ativar |
-|--------|------|-----------|-------------|
+|--------|------|:-----------:|-------------|
 | `full-stack` | Geral (padrão) | 10 | `mcp profile set full-stack` |
 | `backend` | APIs, banco, Docker | 8 | `mcp profile set backend` |
 | `frontend` | UI, navegador | 7 | `mcp profile set frontend` |
@@ -301,155 +239,266 @@ Isso reduz consumo de memória e melhora a qualidade das respostas da IA.
 | `data-engineering` | Dados, ETL | 5 | `mcp profile set data-engineering` |
 | `minimal` | Leve (3 servidores) | 3 | `mcp profile set minimal` |
 
-A detecção automática também funciona:
-- Projetos com `Dockerfile` → perfil `devops`
-- Projetos com `package.json` → perfil `frontend`
-- Projetos com `Cargo.toml` ou `pyproject.toml` → perfil `backend`
+A plataforma também **detecta automaticamente** o perfil ideal baseado no projeto:
+- `Dockerfile` → perfil `devops`
+- `package.json` → perfil `frontend`
+- `Cargo.toml` / `pyproject.toml` → perfil `backend`
 
 ---
 
-## Servidores Disponíveis
-
-### Tier 1 — Core (instalação padrão)
-| Servidor | Versão | Função | Risco | Instalar |
-|----------|--------|--------|-------|----------|
-| Context7 | 3.2.3 | Documentação viva de APIs/frameworks | Baixo | `mcp install context7` |
-| Serena | 1.10.0 | Navegação semântica de código | Baixo | `mcp install serena` |
-| GitHub | 2025.4.8 | Issues, PRs, commits, busca | Médio | `mcp install github` |
-| Playwright | 0.0.78 | Automação de navegador | Alto | `mcp install playwright` |
-| Filesystem | 2026.7.10 | Leitura/escrita segura de arquivos | Alto | `mcp install filesystem` |
-| Sequential Thinking | 2026.7.4 | Raciocínio estruturado | Nenhum | `mcp install sequential-thinking` |
-
-### Tier 2 — Enhanced (instalação sob demanda)
-| Servidor | Versão | Função | Risco | Instalar |
-|----------|--------|--------|-------|----------|
-| PostgreSQL | 0.6.2 | Gerenciamento de banco | Alto | `mcp install postgres` |
-| Docker | 2026.7.4 | Gerenciamento de containers | Crítico | `mcp install docker` |
-| Fetch | 0.0.78 | Pesquisa na web | Baixo | `mcp install fetch` |
-| Memory | 2026.7.4 | Memória persistente entre sessões | Baixo | `mcp install memory` |
-
-### Tier 3 — Expert
-| Servidor | Versão | Função | Instalar |
-|----------|--------|--------|----------|
-| Tavily | 1.0.0 | Pesquisa web profissional | `mcp install tavily` |
-
----
-
-## Múltiplos Projetos
-
-Você pode vincular quantos projetos quiser à plataforma MCP:
+## Vincular a um Projeto
 
 ```bash
-# Vincular projetos
-cd C:\workspace\Freelancer\K.A.O.S
+# Vincular (dentro do diretorio do projeto)
+cd C:\workspace\MeuProjeto
 mcp project add --agent opencode
 
-cd C:\workspace\Freelancer\Wakanda
-mcp project add --agent claude-code
+# Verificar vinculo
+mcp project status
 
-cd C:\workspace\OutroProjeto
-mcp project add --agent cursor
-
-# Ver todos os projetos vinculados
+# Listar todos os projetos vinculados
 mcp project list
-```
 
-Cada projeto pode usar um agente diferente (OpenCode, Claude Code, Cursor, VS Code).
-
-Para remover um projeto:
-```bash
-cd C:\workspace\Freelancer\Wakanda
+# Desvincular
 mcp project remove
 ```
 
----
-
-## Variáveis de Ambiente
-
-| Variável | Padrão | Descrição |
-|----------|--------|-----------|
-| `MCP_HOME` | OS-specific | Diretório raiz da plataforma |
-| `MCP_PROFILE` | `full-stack` | Perfil ativo |
-| `MCP_DEBUG` | `false` | Logs detalhados |
-| `GITHUB_TOKEN` | — | Token do GitHub (obrigatório) |
-| `DATABASE_URL` | — | String de conexão PostgreSQL |
-
-### Diretório Padrão da Plataforma
-
-| Sistema | Caminho |
-|---------|---------|
-| Windows | `%APPDATA%/mcp/` |
-| Linux | `~/.config/mcp/` |
-| macOS | `~/Library/Application Support/mcp/` |
-| Docker | `/home/mcp/.config/mcp/` (volume mcp_config) |
+Cada projeto pode usar um agente diferente:
+```bash
+mcp project add --agent opencode     # OpenCode
+mcp project add --agent claude-code  # Claude Code
+mcp project add --agent cursor       # Cursor
+mcp project add --agent vscode       # VS Code
+```
 
 ---
 
-## Estrutura do Projeto
+## Adicionar Servidor Customizado
+
+### Método 1 — Pelo CLI (recomendado)
+
+```bash
+# Adicionar um servidor npm:
+mcp project add-server --name meu-serv --cmd npx --args -y,@pacote/meu-serv
+
+# Adicionar um script Python:
+mcp project add-server --name meu-serv --cmd python --args -m,meu_servidor
+
+# Adicionar um executavel local:
+mcp project add-server --name meu-serv --cmd node --args servidor.js
+```
+
+### Método 2 — Editando o arquivo diretamente
+
+Abra `.opencode/opencode.json` no seu projeto e adicione no bloco `mcp`:
+
+```json
+{
+  "mcp": {
+    "meu-servidor": {
+      "type": "local",
+      "command": ["npx", "-y", "@pacote/meu-servidor"],
+      "enabled": true
+    }
+  }
+}
+```
+
+Depois reinicie o OpenCode.
+
+### Método 3 — Adicionar ao Registry (para usar em varios projetos)
+
+Edite `registry.yaml` e adicione uma entrada seguindo o schema existente.
+Depois instale e vincule:
+
+```bash
+mcp install meu-servidor
+mcp generate opencode
+```
+
+---
+
+# Para Desenvolvedores
+
+## Arquitetura
+
+```
+Agente IA (OpenCode, Claude Code, etc.)
+         │  STDIO
+         ▼
+┌─────────────────────────────┐
+│    Transport Layer           │
+│  STDIO · HTTP · SSE · WS    │
+├─────────────────────────────┤
+│    Server Manager            │
+│  Lifecycle · State Machine   │
+├─────────────────────────────┤
+│    Authorization Engine      │
+│  Agent × Profile × Risk     │
+├─────────────────────────────┤
+│    MCP Servers               │
+│  GitHub · Filesystem · ...  │
+└─────────────────────────────┘
+```
+
+Documentação completa da arquitetura: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+
+### Estrutura do Projeto
 
 ```
 personal-mcp-platform/
-├── mcp_cli/                    # CLI em Python (código fonte)
+├── mcp_cli/                    # CLI em Python (codigo fonte)
+│   ├── __main__.py             # Entry point (16 comandos)
+│   ├── core/                   # Biblioteca principal
+│   │   ├── config.py           # Path resolution, YAML load/save
+│   │   ├── transport.py        # STDIO/HTTP/SSE/WS + TransportFactory
+│   │   ├── server_manager.py   # Maquina de estados (12 estados)
+│   │   ├── permissions.py      # Engine de autorizacao (6 dimensoes)
+│   │   ├── profiles.py         # 9 perfis de engenharia
+│   │   ├── secrets.py          # Resolucao de secrets
+│   │   ├── health.py           # Monitor de saude (JSONL)
+│   │   ├── updater.py          # Version check + rollback
+│   │   └── generator.py        # Geracao de configs para agentes
+│   └── commands/               # Handlers dos comandos CLI
 ├── docker/                     # Docker Compose + nginx proxy
-│   ├── docker-compose.yml      # 12 serviços MCP conteinerizados
-│   └── nginx.conf              # Proxy HTTP/SSE na porta 8080
-├── scripts/
-│   ├── install.ps1             # Instalador PowerShell (Windows)
-│   └── install.sh              # Instalador Bash (Linux/macOS)
-├── docs/                       # Documentação completa
-│   ├── ARCHITECTURE.md         # Arquitetura do sistema
-│   ├── INSTALLATION.md         # Guia de instalação detalhado
-│   ├── USAGE.md                # Referência de comandos
-│   ├── PROFILES.md             # Perfis de engenharia
-│   ├── SECURITY.md             # Modelo de segurança
-│   ├── TROUBLESHOOTING.md      # Solução de problemas
-│   ├── DEVELOPMENT.md          # Guia do desenvolvedor
-│   └── UPGRADE.md              # Atualizações e rollback
-├── registry.yaml               # Catálogo de servidores (fonte única da verdade)
-├── profiles/                   # Definições dos 9 perfis
-├── config/config.yaml          # Configuração do usuário
-├── pyproject.toml              # Pacote Python
-├── README.md                   # Este arquivo
-└── .gitignore
+├── scripts/                    # Installers (PowerShell, Bash)
+├── docs/                       # 8 documentos de documentacao
+├── registry.yaml               # Catalogo de servidores
+├── profiles/                   # Definicoes dos perfis
+├── tests/                      # Testes unitarios
+├── config/                     # Configuracao padrao
+├── CHANGELOG.md                # Historico de versoes
+└── pyproject.toml              # Pacote Python
 ```
 
 ---
 
-## Primeiros Passos Após Instalação
+## Adicionar Servidor ao Registry
+
+Para adicionar um novo servidor MCP ao catalogo oficial:
+
+**1. Verificar o pacote:**
 
 ```bash
-# 1. Verificar se está tudo funcionando
-mcp status
-
-# 2. Escolher um perfil
-mcp profile set full-stack
-
-# 3. Iniciar servidores
-mcp start
-
-# 4. Verificar saúde
-mcp health check
-
-# 5. Testar benchmark
-mcp benchmark github
-
-# 6. Vincular a um projeto
-cd C:\workspace\SeuProjeto
-mcp project add --agent opencode
+npm view @pacote/do-servidor version
+npx -y @pacote/do-servidor
 ```
 
-Agora abra seu agente de IA no projeto e ele já terá acesso a todas as ferramentas MCP.
+**2. Adicionar ao `registry.yaml`:**
+
+```yaml
+- id: meu-servidor
+  name: "Meu Servidor MCP"
+  version: "1.0.0"
+  category: custom
+  maturity: experimental
+  protocol:
+    default: stdio
+    transports:
+      - type: stdio
+        command: "npx"
+        args: ["-y", "@pacote/do-servidor"]
+  permissions:
+    filesystem: none
+    network: https-outbound
+    shell: false
+    secrets: []
+  requirements:
+    node: ">=18"
+    npm: true
+  install:
+    method: npx
+    command: "npx @pacote/do-servidor"
+```
+
+**3. Testar:**
+
+```bash
+mcp install meu-servidor
+mcp start meu-servidor
+mcp status
+```
+
+---
+
+## Testes
+
+```bash
+# Instalar dependencias de teste
+pip install pytest pytest-asyncio
+
+# Rodar todos os testes
+pytest tests/
+
+# Cobertura
+pip install pytest-cov
+pytest --cov=mcp_cli tests/
+```
+
+---
+
+# Servidores Disponíveis
+
+### Tier 1 — Core (instalação padrão)
+| Servidor | Versão | Função | Risco |
+|----------|--------|--------|:-----:|
+| Context7 | 3.2.3 | Documentação viva de APIs/frameworks | Baixo |
+| Serena | 1.10.0 | Navegação semântica de código | Baixo |
+| GitHub | 2025.4.8 | Issues, PRs, commits, busca | Médio |
+| Playwright | 0.0.78 | Automação de navegador | Alto |
+| Filesystem | 2026.7.10 | Leitura/escrita segura de arquivos | Alto |
+| Sequential Thinking | 2026.7.4 | Raciocínio estruturado | Nenhum |
+
+### Tier 2 — Enhanced (sob demanda)
+| Servidor | Versão | Função | Risco |
+|----------|--------|--------|:-----:|
+| PostgreSQL | 0.6.2 | Gerenciamento de banco | Alto |
+| Docker | 2026.7.4 | Gerenciamento de containers | Crítico |
+| Fetch | 1.1.2 | Pesquisa na web | Baixo |
+| Memory | 2026.7.4 | Memória persistente | Baixo |
+
+### Tier 3 — Expert
+| Servidor | Versão | Função |
+|----------|--------|--------|
+| Tavily | 1.0.0 | Pesquisa web profissional |
+
+---
+
+# Solução de Problemas
+
+| Problema | Causa | Solução |
+|----------|-------|---------|
+| `mcp: command not found` | CLI nao instalado | `pip install -e .` |
+| `npx: command not found` | Node.js nao instalado | Instalar de https://nodejs.org |
+| `Connection closed by server` | Caminho com espacos | Use aspas no path |
+| `Server not in registry` | ID errado | `mcp registry list` |
+| `Cannot transition from registered` | Servidor nao instalado | `mcp install <server>` |
+| `GITHUB_TOKEN not set` | Token faltando | `$env:GITHUB_TOKEN = "ghp_..."` |
+| Servidor aparece desabilitado | Docker/DB nao disponivel | Inicie o Docker ou sete DATABASE_URL |
+| OpenCode nao ve os servidores | Arquivo no lugar errado | Verifique `.opencode/opencode.json` |
+
+---
+
+# Documentação
+
+| Documento | Para quem | Conteúdo |
+|-----------|-----------|----------|
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Desenvolvedores | C4 diagrams, transport, permission model, lifecycles |
+| [`docs/INSTALLATION.md`](docs/INSTALLATION.md) | Usuários | Instalação passo a passo |
+| [`docs/USAGE.md`](docs/USAGE.md) | Usuários | Todos os comandos com exemplos |
+| [`docs/PROFILES.md`](docs/PROFILES.md) | Usuários | Detalhes dos 9 perfis |
+| [`docs/SECURITY.md`](docs/SECURITY.md) | Todos | Modelo de segurança, secrets, auditoria |
+| [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) | Usuários | Solução de problemas |
+| [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) | Desenvolvedores | Guia de contribuição, adicionar comandos |
+| [`docs/UPGRADE.md`](docs/UPGRADE.md) | Usuários | Atualizações e rollback |
 
 ---
 
 ## Suporte
 
-| Recurso | Onde |
-|---------|------|
-| Documentação completa | `docs/` |
-| GitHub Issues | https://github.com/Brian5m1th/personal-mcp-platform/issues |
-| Diagnóstico rápido | `mcp health check` |
-| Logs | `%APPDATA%/mcp/logs/` (Windows), `~/.config/mcp/logs/` (Linux/macOS) |
+- **Issues:** https://github.com/Brian5m1th/personal-mcp-platform/issues
+- **Logs da plataforma:** `%APPDATA%/mcp/logs/` (Windows), `~/.config/mcp/logs/` (Linux/macOS)
+- **Diagnóstico rápido:** `mcp health check`
 
 ---
 
