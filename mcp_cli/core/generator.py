@@ -36,12 +36,26 @@ class AgentConfigGenerator:
             env = {}
             for key, val in transport.get("env", {}).items():
                 env[key] = val
+            # Check availability
+            available = True
+            import os
+            sid = s.get("id", "")
+            if sid == "docker":
+                # Check if Docker daemon is accessible
+                available = os.system("docker ps >nul 2>&1") == 0 if os.name == "nt" else os.system("docker ps >/dev/null 2>&1") == 0
+            elif sid == "postgres":
+                # Check if DATABASE_URL is set
+                available = bool(os.environ.get("DATABASE_URL"))
+            elif sid == "github":
+                # Check if GITHUB_TOKEN is set
+                available = bool(os.environ.get("GITHUB_TOKEN"))
             result.append({
                 "id": s.get("id"),
                 "name": s.get("name"),
                 "command": transport.get("command"),
                 "args": args,
                 "env": env,
+                "available": available,
             })
         return result
 
@@ -80,6 +94,9 @@ class AgentConfigGenerator:
                 "type": "local",
                 "command": cmd,
             }
+            # Disable servers that are not available (Docker not running, no DATABASE_URL, etc.)
+            if not s.get("available", True):
+                entry["enabled"] = False
             env = {}
             for key, val in s.get("env", {}).items():
                 env[key] = val
@@ -105,9 +122,20 @@ class AgentConfigGenerator:
         return config
 
     def generate_cursor(self) -> dict:
-        """Generate Cursor MCP configuration."""
-        # Cursor uses the same format as VS Code
-        return self.generate_vscode()
+        """Generate Cursor MCP configuration (experimental feature flag format)."""
+        servers = self._get_servers_for_agent()
+        config = {"mcpServers": {}}
+        for s in servers:
+            config["mcpServers"][s["id"]] = {
+                "command": s["command"],
+                "args": s["args"],
+            }
+            env = {}
+            for key, val in s.get("env", {}).items():
+                env[key] = val
+            if env:
+                config["mcpServers"][s["id"]]["env"] = env
+        return config
 
     def generate_antigravity(self) -> dict:
         """Generate Antigravity MCP configuration."""

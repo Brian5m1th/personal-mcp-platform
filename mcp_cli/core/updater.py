@@ -2,8 +2,11 @@
 Update manager — version checking, compatibility validation, backup/rollback.
 """
 
+import asyncio
 import json
+import os
 import shutil
+import sys
 import time
 from datetime import datetime
 from pathlib import Path
@@ -104,6 +107,46 @@ class UpdateManager:
         if server_id:
             backups = [b for b in backups if b.get("server") == server_id]
         return backups
+
+    async def apply_update(self, server_entry: dict) -> bool:
+        """Actually apply the update by running the install command."""
+        server_id = server_entry.get("id", "unknown")
+        install = server_entry.get("install", {})
+        method = install.get("method", "npx")
+        command = install.get("command", "")
+
+        if method == "npx":
+            package = command.replace("npx ", "").strip()
+            cmd = ["npx", "-y", package]
+        elif method == "npm":
+            cmd = ["npm", "install", "-g", command.replace("npm install -g ", "").strip()]
+        elif method == "pip":
+            cmd = [sys.executable, "-m", "pip", "install", "--upgrade", command.replace("pip install ", "").strip()]
+        elif method == "uvx":
+            cmd = ["uvx", command.replace("uvx ", "").strip()]
+        else:
+            logger.error(f"[updater] Unknown install method '{method}' for '{server_id}'")
+            return False
+
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            _, stderr = await asyncio.wait_for(proc.communicate(), timeout=120)
+            if proc.returncode == 0:
+                logger.info(f"[updater] Updated '{server_id}' successfully")
+                return True
+            else:
+                logger.error(f"[updater] Failed to update '{server_id}': {stderr.decode(errors='replace')[:200]}")
+                return False
+        except asyncio.TimeoutError:
+            logger.error(f"[updater] Update timed out for '{server_id}'")
+            return False
+        except Exception as e:
+            logger.error(f"[updater] Update error for '{server_id}': {e}")
+            return False
 
     def get_latest_backup(self, server_id: str) -> dict | None:
         """Get the most recent backup for a server."""

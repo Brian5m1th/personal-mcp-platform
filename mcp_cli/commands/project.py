@@ -163,8 +163,13 @@ def project_cmd(
             existing["mcp"] = {"servers": config["mcpServers"]}
             with open(config_path, "w", encoding="utf-8") as f:
                 json.dump(existing, f, indent=2, ensure_ascii=False)
+        elif agent == "antigravity":
+            config_path = project_root / ".antigravity" / "mcp.json"
+            config_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(config_path, "w", encoding="utf-8") as f:
+                json.dump(config, f, indent=2, ensure_ascii=False)
         else:
-            rprint(f"[red]Unknown agent: {agent}. Use: opencode, claude-code, cursor, vscode[/red]")
+            rprint(f"[red]Unknown agent: {agent}. Use: opencode, claude-code, cursor, vscode, antigravity[/red]")
             raise typer.Exit(1)
 
         # Register in projects registry
@@ -212,6 +217,17 @@ def project_cmd(
         else:
             rprint(f"[yellow]Project '{project_name}' is not linked to MCP.[/yellow]")
             rprint(f"  Run [bold]mcp project add[/bold] in the project directory to link it.")
+
+    elif action == "add-server":
+        if not path:
+            rprint("[red]Error: --path/-p is required for add-server. Usage:
+  mcp project add-server --name my-server --cmd npx --args -y,some-package,--extra-arg
+  mcp project add-server --name my-server --cmd python --args -m,my_mcp_server
+  mcp project add-server --name my-server --cmd node --args server.js[/red]")
+            raise typer.Exit(1)
+        # Parse args from comma-separated string
+        command_parts = path.split(",")
+        _add_custom_server(command_parts)
 
     elif action == "list":
         if not projects["projects"]:

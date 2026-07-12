@@ -13,6 +13,7 @@ from loguru import logger
 from mcp_cli.core.config import PlatformConfig, get_server_config_path, save_yaml, load_yaml
 from mcp_cli.core.transport import MCPTransport, TransportFactory
 from mcp_cli.core.config import get_mcp_home
+from mcp_cli.core.health import HealthMonitor
 
 
 class ServerState(str, Enum):
@@ -198,6 +199,8 @@ class ServerManager:
     def __init__(self):
         self.config = PlatformConfig()
         self._servers: dict[str, ManagedServer] = {}
+        self._health_monitor = HealthMonitor()
+        self._health_task: asyncio.Task | None = None
 
     async def start_all(self) -> int:
         """Start all enabled servers. Returns count of successful starts."""
@@ -261,12 +264,34 @@ class ServerManager:
         return await self.start_one(server_id)
 
     async def health_check_all(self) -> list[dict]:
-        """Run health checks on all managed servers."""
+        """Run health checks on all managed servers and record metrics."""
         results = []
         for sid, server in list(self._servers.items()):
             health = await server.health_check()
+            await self._health_monitor.record_health(sid, health)
             results.append({"id": sid, **health})
         return results
+
+    async def start_periodic_health_checks(self, interval_seconds: int = 60):
+        """Start a background task that periodically checks health of all servers."""
+        if self._health_task is not None:
+            return
+
+        async def _loop():
+            while True:
+                await asyncio.sleep(interval_seconds)
+                if self._servers:
+                    await self.health_check_all()
+
+        self._health_task = asyncio.create_task(_loop())
+        logger.info(f"[health] Periodic checks started every {interval_seconds}s")
+
+    def stop_periodic_health_checks(self):
+        """Stop the periodic health check background task."""
+        if self._health_task is not None:
+            self._health_task.cancel()
+            self._health_task = None
+            logger.info("[health] Periodic checks stopped")
 
     def get_status_all(self) -> list[dict]:
         """Get status for all managed servers."""

@@ -4,6 +4,7 @@ Transport abstraction layer — STDIO, HTTP/SSE, and WebSocket transports.
 
 import asyncio
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -99,16 +100,13 @@ class StdioTransport(MCPTransport):
                 f"Executable '{self._command}' not found in PATH"
             )
 
-        env = dict(subprocess.__dict__) if False else None  # placeholder
-        env = None  # Will implement properly
-
         try:
-            self._process = subprocess.Popen(
-                [resolved, *self._args],
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                env={**dict(subprocess.os.environ), **self._env_overrides}
+            self._process = await asyncio.create_subprocess_exec(
+                resolved, *self._args,
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                env={**dict(os.environ), **self._env_overrides}
                 if self._env_overrides
                 else None,
             )
@@ -123,7 +121,7 @@ class StdioTransport(MCPTransport):
             return True
         try:
             self._process.terminate()
-            self._process.wait(timeout=5)
+            await asyncio.wait_for(self._process.wait(), timeout=5)
             self._process = None
             self._connected_at = None
             logger.info("[stdio] Disconnected")
@@ -145,10 +143,12 @@ class StdioTransport(MCPTransport):
         try:
             req_str = json.dumps(req) + "\n"
             self._process.stdin.write(req_str.encode("utf-8"))
-            self._process.stdin.flush()
+            await self._process.stdin.drain()
 
             while True:
-                line = self._process.stdout.readline()
+                line = await asyncio.wait_for(
+                    self._process.stdout.readline(), timeout=30
+                )
                 if not line:
                     raise TransportConnectionError("Connection closed by server")
                 try:
@@ -159,6 +159,8 @@ class StdioTransport(MCPTransport):
                                 f"Server error: {resp['error']}"
                             )
                         return resp.get("result", {})
+                except asyncio.TimeoutError:
+                    raise TransportTimeoutError("Request timed out after 30s")
                 except json.JSONDecodeError:
                     continue
         except TransportError:
@@ -172,7 +174,7 @@ class StdioTransport(MCPTransport):
         notif = {"jsonrpc": "2.0", "method": method, "params": params}
         try:
             self._process.stdin.write((json.dumps(notif) + "\n").encode("utf-8"))
-            self._process.stdin.flush()
+            await self._process.stdin.drain()
         except Exception:
             pass
 
@@ -189,7 +191,7 @@ class StdioTransport(MCPTransport):
         t0 = time.monotonic()
         if self._process is None:
             return {"status": "down", "latency_ms": 0, "error": "Not connected"}
-        ret = self._process.poll()
+        ret = self._process.returncode
         latency_ms = int((time.monotonic() - t0) * 1000)
         if ret is not None:
             self._process = None

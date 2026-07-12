@@ -113,6 +113,16 @@ async def _run_start(server_id: str | None, profile: str | None, detach: bool):
         return
 
     mgr = ServerManager()
+
+    # Auto-detect profile if not specified
+    if profile is None and server_id is None:
+        from mcp_cli.core.profiles import ProfileManager
+        pm = ProfileManager()
+        detected = pm.auto_detect(os.getcwd())
+        if detected:
+            profile = detected
+            rprint(f"[dim]Auto-detected profile: {profile}[/dim]")
+
     if profile:
         from mcp_cli.core.config import save_yaml, get_active_profile_path
         import time
@@ -139,6 +149,9 @@ async def _run_start(server_id: str | None, profile: str | None, detach: bool):
         count = await mgr.start_all()
         rprint(f"[green]v Started {count} server(s)[/green]")
 
+    # Start periodic health checks
+    await mgr.start_periodic_health_checks()
+
     statuses = mgr.get_status_all()
     _display_status(statuses)
 
@@ -151,6 +164,7 @@ async def _run_start(server_id: str | None, profile: str | None, detach: bool):
                 await asyncio.sleep(1)
         except KeyboardInterrupt:
             rprint("\n[yellow]Shutting down...[/yellow]")
+            mgr.stop_periodic_health_checks()
             await mgr.stop_all()
             rprint("[green]All servers stopped.[/green]")
 

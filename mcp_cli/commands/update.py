@@ -64,7 +64,13 @@ async def _run_apply(server_id: str | None):
             s["id"], result["current_version"], result["latest_version"]
         )
         rprint(f"  [dim]  Backup: {backup_id}[/dim]")
-        rprint(f"  [green]  v Update applied[/green]")
+
+        # Apply the actual update
+        success = await updater.apply_update(s)
+        if success:
+            rprint(f"  [green]  v Update applied[/green]")
+        else:
+            rprint(f"  [red]  x Update failed for '{s['id']}'[/red]")
 
 
 async def _run_rollback(server_id: str, version: str | None):
