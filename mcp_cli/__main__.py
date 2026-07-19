@@ -48,6 +48,7 @@ def _register_commands():
         ("generate", "mcp_cli.commands.generate", "generate_cmd"),
         ("health", "mcp_cli.commands.health", "health_cmd"),
         ("registry", "mcp_cli.commands.registry_cmd", "registry_cmd"),
+        ("discover", "mcp_cli.commands.discover", "discover_cmd"),
         ("config", "mcp_cli.commands.config", "config_cmd"),
         ("benchmark", "mcp_cli.commands.benchmark", "benchmark_cmd"),
         ("project", "mcp_cli.commands.project", "project_cmd"),
