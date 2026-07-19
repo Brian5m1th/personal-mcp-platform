@@ -4,6 +4,7 @@ Configuration management — platform paths, file resolution, and schema.
 
 import os
 import sys
+import tempfile
 from pathlib import Path
 from typing import Optional
 
@@ -49,6 +50,7 @@ def ensure_dirs() -> Path:
         home / "cache" / "tools",
         home / "cache" / "schemas",
         home / "cache" / "health",
+        home / "cache" / "pids",
         home / "logs" / "servers",
         home / "downloads",
         home / "templates",
@@ -56,6 +58,8 @@ def ensure_dirs() -> Path:
     ]
     for d in dirs:
         d.mkdir(parents=True, exist_ok=True)
+        if not os.access(d, os.W_OK):
+            logger.warning(f"Directory not writable: {d}")
     logger.debug(f"MCP_HOME resolved to: {home}")
     return home
 
@@ -97,10 +101,16 @@ def load_yaml(path: Path) -> dict:
 
 
 def save_yaml(path: Path, data: dict) -> None:
-    """Save a dict as YAML."""
+    """Save a dict as YAML atomically (write to temp, then rename)."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        yaml.dump(data, f, default_flow_style=False, sort_keys=False)
+    tmp = path.parent / f".{path.name}.tmp"
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            yaml.dump(data, f, default_flow_style=False, sort_keys=False)
+        tmp.replace(path)
+    finally:
+        if tmp.exists():
+            tmp.unlink(missing_ok=True)
     logger.debug(f"Saved {path}")
 
 

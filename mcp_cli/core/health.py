@@ -3,6 +3,8 @@ Health monitor — periodic health checks, metrics, and alerting.
 """
 
 import json
+import os
+import sys
 import time
 from pathlib import Path
 from datetime import datetime
@@ -19,6 +21,21 @@ class HealthMonitor:
         self._metrics_db = get_mcp_home() / "cache" / "health" / "metrics.jsonl"
         self._metrics_db.parent.mkdir(parents=True, exist_ok=True)
 
+    def _acquire_lock(self, f):
+        """Acquire a file lock to prevent concurrent corruption."""
+        if sys.platform == "win32":
+            try:
+                import msvcrt
+                msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
+            except (ImportError, OSError):
+                pass
+        else:
+            try:
+                import fcntl
+                fcntl.flock(f.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except (ImportError, OSError):
+                pass
+
     async def record_health(self, server_id: str, health: dict) -> None:
         """Record a health check result to the metrics store."""
         entry = {
@@ -30,7 +47,10 @@ class HealthMonitor:
         }
         try:
             with open(self._metrics_db, "a", encoding="utf-8") as f:
+                self._acquire_lock(f)
                 f.write(json.dumps(entry) + "\n")
+                f.flush()
+                os.fsync(f.fileno())
         except Exception as e:
             logger.warning(f"[health] Failed to record metric: {e}")
 

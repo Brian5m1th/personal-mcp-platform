@@ -116,45 +116,88 @@ function Initialize-Directories {
 function Initialize-Profiles {
     Write-Step "Creating engineering profiles..."
 
-    $profiles = @{
-        "backend" = @{
-            name = "Backend Engineering"
-            description = "Servers for backend development"
-            enabled_servers = @("context7", "github", "postgres", "docker", "sequential-thinking", "filesystem", "fetch", "memory")
-            disabled_servers = @("playwright", "serena")
-        }
-        "frontend" = @{
-            name = "Frontend Engineering"
-            description = "Servers for frontend development"
-            enabled_servers = @("context7", "github", "playwright", "filesystem", "sequential-thinking", "fetch", "memory")
-            disabled_servers = @("postgres", "docker", "serena")
-        }
-        "ai-llm" = @{
-            name = "AI / LLM Engineering"
-            description = "Servers for AI development"
-            enabled_servers = @("context7", "serena", "github", "sequential-thinking", "memory", "fetch", "filesystem")
-            disabled_servers = @("playwright", "docker", "postgres")
-        }
-        "full-stack" = @{
-            name = "Full Stack (Default)"
-            description = "All servers with sensible limits"
-            enabled_servers = @("context7", "serena", "github", "playwright", "filesystem", "sequential-thinking", "postgres", "docker", "fetch", "memory")
-            disabled_servers = @()
-        }
-        "minimal" = @{
-            name = "Minimal / Lightweight"
-            description = "Minimal servers for quick sessions"
-            enabled_servers = @("filesystem", "github", "sequential-thinking")
-            disabled_servers = @()
-        }
-    }
-
     $profilesDir = "$McpHome/profiles"
-    foreach ($name in $profiles.Keys) {
-        $path = Join-Path $profilesDir "$name.yaml"
+    New-Item -ItemType Directory -Path $profilesDir -Force | Out-Null
+
+    $profiles = @(
+        @{ name = "backend"; content = @"
+name: "Backend Engineering"
+description: "Servers for backend development"
+enabled_servers:
+  - context7
+  - github
+  - postgres
+  - docker
+  - sequential-thinking
+  - filesystem
+  - fetch
+  - memory
+disabled_servers:
+  - playwright
+  - serena
+"@ }
+        @{ name = "frontend"; content = @"
+name: "Frontend Engineering"
+description: "Servers for frontend development"
+enabled_servers:
+  - context7
+  - github
+  - playwright
+  - filesystem
+  - sequential-thinking
+  - fetch
+  - memory
+disabled_servers:
+  - postgres
+  - docker
+  - serena
+"@ }
+        @{ name = "ai-llm"; content = @"
+name: "AI / LLM Engineering"
+description: "Servers for AI development"
+enabled_servers:
+  - context7
+  - serena
+  - github
+  - sequential-thinking
+  - memory
+  - fetch
+  - filesystem
+disabled_servers:
+  - playwright
+  - docker
+  - postgres
+"@ }
+        @{ name = "full-stack"; content = @"
+name: "Full Stack (Default)"
+description: "All servers with sensible limits"
+enabled_servers:
+  - context7
+  - serena
+  - github
+  - playwright
+  - filesystem
+  - sequential-thinking
+  - postgres
+  - docker
+  - fetch
+  - memory
+"@ }
+        @{ name = "minimal"; content = @"
+name: "Minimal / Lightweight"
+description: "Minimal servers for quick coding sessions"
+enabled_servers:
+  - filesystem
+  - github
+  - sequential-thinking
+"@ }
+    )
+
+    foreach ($profile in $profiles) {
+        $path = Join-Path $profilesDir "$($profile.name).yaml"
         if (-not (Test-Path $path)) {
-            $profiles[$name] | ConvertTo-Yaml | Out-File -FilePath $path -Encoding utf8
-            Write-OK "Created profile: $name"
+            $profile.content | Out-File -FilePath $path -Encoding utf8
+            Write-OK "Created profile: $($profile.name)"
         }
     }
 }
@@ -170,12 +213,14 @@ function Install-NpxPackage {
     }
 
     try {
-        $proc = Start-Process -FilePath "npx" -ArgumentList "-y", $PackageName -Wait -NoNewWindow -PassThru
-        if ($proc.ExitCode -eq 0) {
+        $output = & npx --yes $PackageName 2>&1
+        $exitCode = $LASTEXITCODE
+        if ($exitCode -eq 0) {
             Write-OK "Installed: $ServerId"
             return $true
         } else {
-            Write-Err "Failed to install $ServerId (exit code: $($proc.ExitCode))"
+            Write-Err "Failed to install $ServerId (exit code: $exitCode)"
+            Write-Err "  $($output -join "`n  ")"
             return $false
         }
     } catch {
@@ -193,7 +238,7 @@ function Install-Servers {
 
     $servers = @{
         "context7" = @{ package = "@context7/mcp-server"; tier = 1 }
-        "serena" = @{ package = "serena-mcp"; tier = 1; method = "uvx" }
+        "serena" = @{ package = "serena-slim"; tier = 1 }
         "github" = @{ package = "@modelcontextprotocol/server-github"; tier = 1 }
         "playwright" = @{ package = "@playwright/mcp"; tier = 1 }
         "filesystem" = @{ package = "@modelcontextprotocol/server-filesystem"; tier = 1 }

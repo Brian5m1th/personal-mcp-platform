@@ -14,6 +14,11 @@ from typing import Any
 import httpx
 from loguru import logger
 
+try:
+    import websockets
+except ImportError:
+    websockets = None
+
 
 class TransportError(Exception):
     """Base exception for transport errors."""
@@ -143,29 +148,34 @@ class StdioTransport(MCPTransport):
             req_str = json.dumps(req) + "\n"
             self._process.stdin.write(req_str.encode("utf-8"))
             await self._process.stdin.drain()
-
-            while True:
-                line = await asyncio.wait_for(
-                    self._process.stdout.readline(), timeout=30
-                )
-                if not line:
-                    raise TransportConnectionError("Connection closed by server")
-                try:
-                    resp = json.loads(line.decode("utf-8"))
-                    if resp.get("id") == req_id:
-                        if "error" in resp:
-                            raise TransportError(
-                                f"Server error: {resp['error']}"
-                            )
-                        return resp.get("result", {})
-                except asyncio.TimeoutError:
-                    raise TransportTimeoutError("Request timed out after 30s")
-                except json.JSONDecodeError:
-                    continue
-        except TransportError:
-            raise
         except Exception as e:
-            raise TransportError(f"STDIO request failed: {e}")
+            raise TransportError(f"Failed to send request: {e}")
+
+        try:
+            resp = await asyncio.wait_for(
+                self._read_response(req_id), timeout=300.0
+            )
+            return resp
+        except asyncio.TimeoutError:
+            raise TransportTimeoutError("Request timed out after 300s")
+
+    async def _read_response(self, req_id: int) -> dict:
+        while True:
+            line = await asyncio.wait_for(
+                self._process.stdout.readline(), timeout=30.0
+            )
+            if not line:
+                raise TransportConnectionError("Connection closed by server")
+            try:
+                resp = json.loads(line.decode("utf-8"))
+                if resp.get("id") == req_id:
+                    if "error" in resp:
+                        raise TransportError(
+                            f"Server error: {resp['error']}"
+                        )
+                    return resp.get("result", {})
+            except json.JSONDecodeError:
+                continue
 
     async def send_notification(self, method: str, params: dict) -> None:
         if not self._process or not self._process.stdin:
@@ -191,11 +201,17 @@ class StdioTransport(MCPTransport):
         if self._process is None:
             return {"status": "down", "latency_ms": 0, "error": "Not connected"}
         ret = self._process.returncode
-        latency_ms = int((time.monotonic() - t0) * 1000)
         if ret is not None:
             self._process = None
+            latency_ms = int((time.monotonic() - t0) * 1000)
             return {"status": "down", "latency_ms": latency_ms, "error": f"Exited with code {ret}"}
-        return {"status": "healthy", "latency_ms": latency_ms, "error": None}
+        try:
+            result = await self.send_request("ping", {})
+            latency_ms = int((time.monotonic() - t0) * 1000)
+            return {"status": "healthy", "latency_ms": latency_ms, "error": None}
+        except Exception as e:
+            latency_ms = int((time.monotonic() - t0) * 1000)
+            return {"status": "down", "latency_ms": latency_ms, "error": str(e)}
 
 
 # ── HTTP/SSE Transport ─────────────────────────────────────────
@@ -293,14 +309,13 @@ class WebSocketTransport(MCPTransport):
     async def connect(self) -> bool:
         if not self._url:
             raise TransportConnectionError("No URL configured")
+        if websockets is None:
+            raise TransportConnectionError("websockets library not installed. Run: pip install mcp-platform[websocket]")
         try:
-            import websockets
             self._ws = await websockets.connect(self._url, extra_headers=self._headers)
             self._connected_at = time.time()
             logger.info(f"[ws] Connected to {self._url}")
             return True
-        except ImportError:
-            raise TransportConnectionError("websockets library not installed. Run: pip install websockets")
         except Exception as e:
             raise TransportConnectionError(f"WebSocket connection failed: {e}")
 

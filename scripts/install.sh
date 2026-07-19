@@ -101,6 +101,11 @@ install_npm() {
         return 0
     fi
 
+    if npx --yes "$package" --version &>/dev/null 2>&1; then
+        ok "Installed: $server"
+        return 0
+    fi
+    # Fallback for npm < 7
     if npx -y "$package" --version &>/dev/null 2>&1; then
         ok "Installed: $server"
         return 0

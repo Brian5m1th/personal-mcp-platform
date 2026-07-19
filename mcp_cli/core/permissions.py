@@ -3,6 +3,8 @@ Authorization engine — multi-dimensional permission evaluation.
 """
 
 import asyncio
+import os
+import sys
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
@@ -102,6 +104,10 @@ class AuthorizationEngine:
         self._approved_set: set[str] = set()
         self._console = None
 
+    def _is_interactive(self) -> bool:
+        """Check if running in an interactive terminal."""
+        return sys.stdin.isatty() and os.environ.get("MCP_NON_INTERACTIVE", "").lower() not in ("1", "true")
+
     def _get_approval(self, server_id: str, tool_name: str, tool_args: dict | None) -> bool:
         """Prompt the user for interactive approval of a high-risk tool call."""
         key = f"{server_id}:{tool_name}"
@@ -111,6 +117,9 @@ class AuthorizationEngine:
 
         if key in self._approved_set:
             return True
+
+        if not self._is_interactive():
+            return False
 
         console = Console()
         console.print(f"\n[yellow]⚠  Approval Required[/yellow]")

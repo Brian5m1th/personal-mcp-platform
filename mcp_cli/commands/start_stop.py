@@ -21,7 +21,7 @@ from mcp_cli.core.server_manager import ServerManager
 
 def _get_pid_dir():
     from mcp_cli.core.config import get_mcp_home
-    d = get_mcp_home() / "servers"
+    d = get_mcp_home() / "cache" / "pids"
     d.mkdir(parents=True, exist_ok=True)
     return d
 
@@ -194,7 +194,13 @@ async def _run_stop(server_id: str | None):
     for entry in pids:
         try:
             if sys.platform == "win32":
-                os.kill(entry["pid"], signal.CTRL_BREAK_EVENT)
+                try:
+                    os.kill(entry["pid"], signal.CTRL_BREAK_EVENT)
+                except Exception:
+                    subprocess.run(
+                        ["taskkill", "/F", "/PID", str(entry["pid"])],
+                        capture_output=True, timeout=5
+                    )
             else:
                 os.kill(entry["pid"], signal.SIGTERM)
             _remove_pid(entry["id"])

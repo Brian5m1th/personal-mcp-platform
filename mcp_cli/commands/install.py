@@ -170,8 +170,5 @@ def install_cmd(
 
 
 async def _install_all(servers: list[dict]) -> list[bool]:
-    results = []
-    for s in servers:
-        result = await _install_server(s)
-        results.append(result)
-    return results
+    tasks = [_install_server(s) for s in servers]
+    return await asyncio.gather(*tasks)

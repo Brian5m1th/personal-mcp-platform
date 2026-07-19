@@ -111,32 +111,34 @@ class SecretsManager:
         return missing
 
     def set_env(self, secret_name: str, value: str) -> None:
-        """Set a secret in the encrypted store."""
+        """Set a secret in the encrypted store. Raises if encryption unavailable."""
         fernet = self._get_fernet()
-        if fernet:
-            try:
-                enc_file = self._secrets_dir / f"{secret_name}.enc"
-                store = {"value": value}
-                encrypted = fernet.encrypt(json.dumps(store).encode())
-                enc_file.write_bytes(encrypted)
-                enc_file.chmod(0o600)
-                logger.info(f"[secrets] Stored '{secret_name}' (encrypted)")
-                return
-            except Exception as e:
-                logger.warning(f"[secrets] Encryption failed, falling back to plain: {e}")
+        if fernet is None:
+            raise ImportError(
+                "cryptography library not found. Run: pip install mcp-platform[encryption]"
+            )
+        enc_file = self._secrets_dir / f"{secret_name}.enc"
+        store = {"value": value}
+        encrypted = fernet.encrypt(json.dumps(store).encode())
+        enc_file.write_bytes(encrypted)
+        enc_file.chmod(0o600)
+        logger.info(f"[secrets] Stored '{secret_name}' (encrypted)")
 
-        # Fallback: plain YAML (legacy)
-        secret_file = self._secrets_dir / f"{secret_name}.yaml"
-        import yaml
-        data = {}
-        if secret_file.exists():
-            with open(secret_file, "r") as f:
-                data = yaml.safe_load(f) or {}
-        data["value"] = value
-        with open(secret_file, "w") as f:
-            yaml.dump(data, f)
-        try:
-            secret_file.chmod(0o600)
-        except Exception:
-            pass
-        logger.info(f"[secrets] Stored '{secret_name}'")
+    def migrate_legacy_secrets(self) -> None:
+        """Migrate existing plaintext YAML secrets to encrypted format."""
+        for legacy_file in self._secrets_dir.glob("*.yaml"):
+            secret_name = legacy_file.stem
+            enc_file = self._secrets_dir / f"{secret_name}.enc"
+            if enc_file.exists():
+                continue
+            try:
+                import yaml
+                with open(legacy_file, "r") as f:
+                    data = yaml.safe_load(f) or {}
+                value = data.get("value")
+                if value:
+                    self.set_env(secret_name, value)
+                    legacy_file.unlink()
+                    logger.info(f"[secrets] Migrated '{secret_name}' from plaintext to encrypted")
+            except Exception as e:
+                logger.warning(f"[secrets] Failed to migrate '{secret_name}': {e}")

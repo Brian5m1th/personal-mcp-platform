@@ -32,39 +32,40 @@ def main(
     pass
 
 
-# ── Import and register commands ───────────────────────────────────
+# ── Lazy command registration ──────────────────────────────────────
 
-from mcp_cli.commands.install import install_cmd
-from mcp_cli.commands.start_stop import start_cmd, stop_cmd, restart_cmd, status_cmd, emergency_stop_cmd
-from mcp_cli.commands.update import update_cmd
-from mcp_cli.commands.profile import profile_cmd
-from mcp_cli.commands.generate import generate_cmd
-from mcp_cli.commands.health import health_cmd
-from mcp_cli.commands.registry_cmd import registry_cmd
-from mcp_cli.commands.config import config_cmd
-from mcp_cli.commands.benchmark import benchmark_cmd
-from mcp_cli.commands.project import project_cmd
-from mcp_cli.commands.secrets import secrets_cmd
-from mcp_cli.commands.logs import logs_cmd
-from mcp_cli.commands.compose import compose_cmd
+def _register_commands():
+    """Register all CLI commands with lazy imports to avoid hard crashes."""
+    commands = [
+        ("install", "mcp_cli.commands.install", "install_cmd"),
+        ("start", "mcp_cli.commands.start_stop", "start_cmd"),
+        ("stop", "mcp_cli.commands.start_stop", "stop_cmd"),
+        ("restart", "mcp_cli.commands.start_stop", "restart_cmd"),
+        ("status", "mcp_cli.commands.start_stop", "status_cmd"),
+        ("emergency", "mcp_cli.commands.start_stop", "emergency_stop_cmd"),
+        ("update", "mcp_cli.commands.update", "update_cmd"),
+        ("profile", "mcp_cli.commands.profile", "profile_cmd"),
+        ("generate", "mcp_cli.commands.generate", "generate_cmd"),
+        ("health", "mcp_cli.commands.health", "health_cmd"),
+        ("registry", "mcp_cli.commands.registry_cmd", "registry_cmd"),
+        ("config", "mcp_cli.commands.config", "config_cmd"),
+        ("benchmark", "mcp_cli.commands.benchmark", "benchmark_cmd"),
+        ("project", "mcp_cli.commands.project", "project_cmd"),
+        ("secrets", "mcp_cli.commands.secrets", "secrets_cmd"),
+        ("logs", "mcp_cli.commands.logs", "logs_cmd"),
+        ("compose", "mcp_cli.commands.compose", "compose_cmd"),
+    ]
+    for name, module_path, attr in commands:
+        try:
+            import importlib
+            mod = importlib.import_module(module_path)
+            cmd_fn = getattr(mod, attr)
+            app.command(name=name)(cmd_fn)
+        except Exception as e:
+            console.print(f"[yellow]Warning: Failed to load '{name}' command: {e}[/yellow]")
 
-app.command(name="install")(install_cmd)
-app.command(name="start")(start_cmd)
-app.command(name="stop")(stop_cmd)
-app.command(name="restart")(restart_cmd)
-app.command(name="status")(status_cmd)
-app.command(name="emergency")(emergency_stop_cmd)
-app.command(name="update")(update_cmd)
-app.command(name="profile")(profile_cmd)
-app.command(name="generate")(generate_cmd)
-app.command(name="health")(health_cmd)
-app.command(name="registry")(registry_cmd)
-app.command(name="config")(config_cmd)
-app.command(name="benchmark")(benchmark_cmd)
-app.command(name="project")(project_cmd)
-app.command(name="secrets")(secrets_cmd)
-app.command(name="logs")(logs_cmd)
-app.command(name="compose")(compose_cmd)
+
+_register_commands()
 
 
 if __name__ == "__main__":

@@ -105,8 +105,10 @@ class ManagedServer:
             # Save PID for reconnect across CLI commands
             info = self.transport.get_server_info()
             if info.get("type") == "stdio" and info.get("pid"):
-                from mcp_cli.core.config import get_server_config_path, save_yaml, load_yaml
-                pid_path = get_server_config_path(f"{self.id}.pid")
+                from mcp_cli.core.config import get_mcp_home
+                pid_dir = get_mcp_home() / "cache" / "pids"
+                pid_dir.mkdir(parents=True, exist_ok=True)
+                pid_path = pid_dir / f"{self.id}.pid"
                 import json
                 pid_path.write_text(json.dumps({"pid": info["pid"]}), encoding="utf-8")
 
